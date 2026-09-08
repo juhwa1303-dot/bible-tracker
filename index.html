@@ -1,0 +1,1472 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>성경 라이프스터디 진도표</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Gothic+A1:wght@700;800&family=IBM+Plex+Sans+KR:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#FCFBFF;
+    --ink:#181C2A;
+    --ink-soft:#5D6172;
+    --ink-faint:#9CA0AF;
+    --hairline:#E4E1EC;
+    --hairline-soft:#EEECF4;
+    --bible:#1849B5;
+    --bible-tint:#DCE7FA;
+    --bible-tint2:#B9D0F5;
+    --bible-wash:#F3F6FD;
+    --ls:#1B7A48;
+    --ls-tint:#DCF0E4;
+    --ls-tint2:#B3DEC3;
+    --ls-wash:#F2FAF5;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:var(--bg);
+    color:var(--ink);
+    font-family:'IBM Plex Sans KR',sans-serif;
+    line-height:1.55;
+    -webkit-font-smoothing:antialiased;
+    transition:background .25s ease;
+  }
+  .wrap{max-width:760px;margin:0 auto;padding:40px 22px 90px;}
+
+  /* ---- header ---- */
+  header.title-block{
+    text-align:center;
+    padding-bottom:26px;
+    margin-bottom:28px;
+    border-bottom:3px solid var(--bible);
+    transition:border-color .25s ease;
+  }
+  header.title-block h1{
+    font-family:'Gothic A1',sans-serif;
+    font-weight:700;
+    font-size:33px;
+    margin:0 0 10px;
+    letter-spacing:-0.01em;
+  }
+  header.title-block p{
+    margin:0 auto;
+    max-width:420px;
+    color:var(--ink-soft);
+    font-size:14.5px;
+  }
+
+  /* ---- tabs (filled, square) ---- */
+  .tabbar{
+    display:flex;
+    justify-content:center;
+    gap:12px;
+    margin-bottom:28px;
+  }
+  .tabbtn{
+    background:var(--hairline-soft);
+    border:none;
+    padding:13px 28px;
+    border-radius:6px;
+    font-family:'Gothic A1',sans-serif;
+    font-weight:700;
+    font-size:16px;
+    color:var(--ink-soft);
+    cursor:pointer;
+    transition:background .15s,color .15s;
+  }
+  .tabbtn.active[data-tab="bible"]{background:var(--bible);color:#fff;}
+  .tabbtn.active[data-tab="ls"]{background:var(--ls);color:#fff;}
+
+  .panel{display:none;}
+  .panel.active{display:block;}
+
+  /* ---- ledger summary ---- */
+  .ledger{
+    margin-bottom:26px;
+    padding:18px 20px;
+    border-radius:16px;
+  }
+  .bible .ledger{background:var(--bible-wash);}
+  .ls .ledger{background:var(--ls-wash);}
+  .ledger-row{
+    display:flex;
+    align-items:center;
+    gap:16px;
+    padding:9px 0;
+  }
+  .ledger-label{
+    width:50px;
+    flex-shrink:0;
+    font-size:13.5px;
+    font-weight:600;
+    color:var(--ink-soft);
+  }
+  .ledger-bar-track{
+    flex:1;
+    height:9px;
+    border-radius:5px;
+    position:relative;
+    overflow:hidden;
+  }
+  .bible .ledger-bar-track{background:var(--bible-tint2);}
+  .ls .ledger-bar-track{background:var(--ls-tint2);}
+  .ledger-bar-fill{height:100%;width:0%;border-radius:5px;transition:width .35s ease;}
+  .bible .ledger-bar-fill{background:var(--bible);}
+  .ls .ledger-bar-fill{background:var(--ls);}
+  .ledger-pct{
+    width:150px;
+    text-align:right;
+    flex-shrink:0;
+    font-variant-numeric:tabular-nums;
+    font-size:12.5px;
+    color:var(--ink-faint);
+  }
+  .ledger-pct b{
+    font-family:'Gothic A1',sans-serif;
+    font-size:19px;
+    font-weight:700;
+    margin-right:5px;
+  }
+  .bible .ledger-pct b{color:var(--bible);}
+  .ls .ledger-pct b{color:var(--ls);}
+
+  /* ---- completion badge ---- */
+  .badge-done{
+    display:inline-flex;
+    align-items:center;
+    gap:4px;
+    font-weight:700;
+    font-size:12.5px;
+    padding:4px 12px;
+    border-radius:999px;
+    color:#fff;
+  }
+  .badge-done::before{content:"✓";font-size:10px;}
+  .bible .badge-done{background:var(--bible);}
+  .ls .badge-done{background:var(--ls);}
+
+  /* ---- toolbars ---- */
+  .toolbar{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:10px;flex-wrap:wrap;}
+  .toolbar.view-toolbar{margin-bottom:8px;}
+  .chips{display:flex;gap:8px;flex-wrap:wrap;}
+  .chip{
+    padding:6px 15px;
+    font-size:12.5px;
+    font-weight:600;
+    border-radius:999px;
+    border:1.5px solid var(--hairline);
+    background:#fff;
+    color:var(--ink-soft);
+    cursor:pointer;
+    transition:background .15s,color .15s,border-color .15s;
+  }
+  .bible .chip.active{background:var(--bible);color:#fff;border-color:var(--bible);}
+  .ls .chip.active{background:var(--ls);color:#fff;border-color:var(--ls);}
+  .toolbar-actions{display:flex;gap:14px;}
+  .linkbtn{
+    background:none;border:none;color:var(--ink-faint);font-size:12px;
+    cursor:pointer;padding:4px 2px;font-weight:500;
+  }
+  .linkbtn:hover{color:var(--ink-soft);}
+
+  /* ---- toc list ---- */
+  .toc{margin-top:16px;}
+  .book{border-bottom:1px solid var(--hairline);}
+  .book:first-child{border-top:1px solid var(--hairline);}
+  .book-head{
+    display:flex;
+    align-items:center;
+    gap:14px;
+    padding:14px 6px;
+    cursor:pointer;
+    user-select:none;
+  }
+  .bible .book-head:hover{background:var(--bible-wash);}
+  .ls .book-head:hover{background:var(--ls-wash);}
+  .book-testament-tag{
+    width:9px;height:9px;flex-shrink:0;
+    border-radius:50%;
+  }
+  .bible .book-testament-tag.ot{background:var(--bible);opacity:.4;}
+  .bible .book-testament-tag.nt{background:var(--bible);}
+  .ls .book-testament-tag.ot{background:var(--ls);opacity:.4;}
+  .ls .book-testament-tag.nt{background:var(--ls);}
+  .book-name{
+    font-family:'Gothic A1',sans-serif;
+    font-weight:700;
+    font-size:15.5px;
+    color:var(--ink);
+    width:130px;
+    flex-shrink:0;
+  }
+  .bible .book.open .book-name{color:var(--bible);}
+  .ls .book.open .book-name{color:var(--ls);}
+  .book-bar-track{
+    flex:1;height:5px;border-radius:3px;position:relative;overflow:hidden;
+  }
+  .bible .book-bar-track{background:var(--bible-tint2);}
+  .ls .book-bar-track{background:var(--ls-tint2);}
+  .book-bar-fill{height:100%;width:0%;border-radius:3px;}
+  .bible .book-bar-fill{background:var(--bible);}
+  .ls .book-bar-fill{background:var(--ls);}
+  .book-count{
+    width:104px;text-align:right;flex-shrink:0;
+    font-size:12px;font-weight:600;color:var(--ink-faint);
+    font-variant-numeric:tabular-nums;
+  }
+  .chevron{
+    width:12px;flex-shrink:0;
+    transition:transform .15s;
+    color:var(--ink-faint);
+    font-size:11px;
+  }
+  .book-head-static{cursor:default;}
+  .book-head-static:hover{background:none !important;}
+  .book.static{border-bottom:1px solid var(--hairline);}
+  .book.open .chevron{transform:rotate(90deg);}
+
+  .chapters{
+    display:none;
+    padding:8px 6px 22px 23px;
+  }
+  .book.open .chapters{display:block;}
+
+  /* chapter grid (life study) */
+  .chapter-grid{
+    display:grid;
+    grid-template-columns:repeat(auto-fill,minmax(30px,1fr));
+    gap:6px;
+    margin-bottom:12px;
+    user-select:none;
+  }
+  .ch-btn{
+    aspect-ratio:1;
+    border-radius:50%;
+    border:1.5px solid var(--hairline);
+    background:#fff;
+    color:var(--ink-faint);
+    font-size:11px;
+    font-weight:600;
+    display:flex;align-items:center;justify-content:center;
+    cursor:pointer;
+    font-variant-numeric:tabular-nums;
+    transition:background .12s,color .12s,border-color .12s;
+  }
+  .bible .ch-btn.read{background:var(--bible);border-color:var(--bible);color:#fff;}
+  .ls .ch-btn.read{background:var(--ls);border-color:var(--ls);color:#fff;}
+  .ls .ch-btn{border-color:var(--ls-tint2);}
+  .bible .ch-btn{border-color:var(--bible-tint2);}
+
+  /* day-entry list (1년1독) */
+  .entry-list{margin-bottom:12px;user-select:none;}
+  .entry-row{
+    display:flex;
+    align-items:center;
+    gap:12px;
+    padding:8px 8px;
+    border-radius:10px;
+    cursor:pointer;
+    transition:background .12s;
+  }
+  .bible .entry-row:hover{background:var(--bible-wash);}
+  .entry-row.read{opacity:.55;}
+  .entry-check{
+    width:21px;height:21px;flex-shrink:0;
+    border-radius:50%;
+    border:2px solid var(--bible-tint2);
+    display:flex;align-items:center;justify-content:center;
+    font-size:11px;color:#fff;font-weight:700;
+  }
+  .entry-row.read .entry-check{background:var(--bible);border-color:var(--bible);}
+  .entry-date{
+    width:44px;flex-shrink:0;
+    font-size:11.5px;font-weight:700;
+    color:var(--bible);
+    background:var(--bible-tint);
+    border-radius:6px;
+    padding:3px 0;
+    text-align:center;
+  }
+  .entry-text{font-size:13.5px;color:var(--ink);flex:1;}
+  .entry-row.read .entry-text{text-decoration:line-through;color:var(--ink-faint);}
+
+  .book-tools{display:flex;gap:16px;}
+  .book-tools button{
+    background:none;border:none;color:var(--ink-faint);font-size:12px;font-weight:600;
+    cursor:pointer;padding:2px 0;
+  }
+  .book-tools button:hover{color:var(--ink-soft);}
+
+  .note{
+    margin-top:22px;
+    font-size:12.5px;
+    line-height:1.6;
+    color:var(--ink-soft);
+    padding:14px 16px;
+    border-radius:12px;
+  }
+  .bible .note{background:var(--bible-wash);}
+  .ls .note{background:var(--ls-wash);}
+
+  @media (max-width:480px){
+    .wrap{padding:28px 16px 70px;}
+    header.title-block h1{font-size:26px;}
+    .tabbar{gap:8px;}
+    .tabbtn{padding:9px 16px;font-size:14.5px;}
+    .book-name{width:82px;font-size:14px;}
+    .ledger-label{width:40px;}
+    .ledger-pct{width:118px;}
+    .book-count{width:78px;font-size:11px;}
+    .chapters{padding-left:8px;}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="title-block">
+    <h1>성경 라이프스터디 진도표</h1>
+    <p>성경 1년 1독과 라이프스터디 읽기 진도를 월별·권별,<br>구약·신약별, 전체로 확인해요.</p>
+  </header>
+
+  <div class="tabbar">
+    <button class="tabbtn active" data-tab="bible">성경 1년 1독</button>
+    <button class="tabbtn" data-tab="ls">라이프스터디</button>
+  </div>
+
+  <div id="panel-bible" class="panel active bible"></div>
+  <div id="panel-ls" class="panel ls"></div>
+
+</div>
+
+<script>
+/* ================= 원본 진도표 데이터 (1/1 ~ 12/31) ================= */
+const ABBR = {
+ "창":"창세기","출":"출애굽기","레":"레위기","민":"민수기","신":"신명기","수":"여호수아","삿":"사사기","룻":"룻기",
+ "삼상":"사무엘상","삼하":"사무엘하","왕상":"열왕기상","왕하":"열왕기하","대상":"역대상","대하":"역대하",
+ "스":"에스라","느":"느헤미야","에":"에스더","욥":"욥기","시":"시편","잠":"잠언","전":"전도서","아":"아가",
+ "사":"이사야","렘":"예레미야","애":"예레미야애가","겔":"에스겔","단":"다니엘","호":"호세아","욜":"요엘",
+ "암":"아모스","옵":"오바댜","욘":"요나","미":"미가","나":"나훔","합":"하박국","습":"스바냐","학":"학개",
+ "슥":"스가랴","말":"말라기",
+ "마":"마태복음","막":"마가복음","눅":"누가복음","요":"요한복음","행":"사도행전","롬":"로마서",
+ "고전":"고린도전서","고후":"고린도후서","갈":"갈라디아서","엡":"에베소서","빌":"빌립보서","골":"골로새서",
+ "살전":"데살로니가전서","살후":"데살로니가후서","딤전":"디모데전서","딤후":"디모데후서","딛":"디도서","몬":"빌레몬서",
+ "히":"히브리서","약":"야고보서","벧전":"베드로전서","벧후":"베드로후서","요일":"요한일서","요이":"요한이서","요삼":"요한삼서",
+ "유":"유다서","계":"요한계시록"
+};
+
+const OT_RAW = [
+["1/1","창 1-2장"],
+["1/2","창 3-5장"],
+["1/3","창 6-8장"],
+["1/4","창 9-11:9"],
+["1/5","창 11:10-13장"],
+["1/6","창 14-16장"],
+["1/7","창 17-18장"],
+["1/8","창 19-20장"],
+["1/9","창 21-23장"],
+["1/10","창 24장"],
+["1/11","창 25-26장"],
+["1/12","창 27-28장"],
+["1/13","창 29-30장"],
+["1/14","창 31-32:12"],
+["1/15","창 32:13-34장"],
+["1/16","창 35-36장"],
+["1/17","창 37-38장"],
+["1/18","창 39-41:24"],
+["1/19","창 41:25-42장"],
+["1/20","창 43-44장"],
+["1/21","창 45-46장"],
+["1/22","창 47-48장"],
+["1/23","창 49-50장"],
+["1/24","출 1-3장"],
+["1/25","출 4:1-6:13"],
+["1/26","출 6:14-8:19"],
+["1/27","출 8:20-9장"],
+["1/28","출 10-11장"],
+["1/29","출 12:1-13:16"],
+["1/30","출 13:17-15:21"],
+["1/31","출 15:22-18장"],
+["2/1","출 19:1-21:25"],
+["2/2","출 21:26-23장"],
+["2/3","출 24:1-26:25"],
+["2/4","출 26:26-28:35"],
+["2/5","출 28:36-29장"],
+["2/6","출 30-31장"],
+["2/7","출 32-33장"],
+["2/8","출 34:1-36:7"],
+["2/9","출 36:8-38:20"],
+["2/10","출 38:21-40장"],
+["2/11","레 1-3장"],
+["2/12","레 4:1-6:7"],
+["2/13","레 6:8-7장"],
+["2/14","레 8-10장"],
+["2/15","레 11-12장"],
+["2/16","레 13장"],
+["2/17","레 14장"],
+["2/18","레 15-16장"],
+["2/19","레 17:1-19:14"],
+["2/20","레 19:15-20장"],
+["2/21","레 21-22장"],
+["2/22","레 23-24장"],
+["2/23","레 25-26:13"],
+["2/24","레 26:14-27장"],
+["2/25","민 1-2장"],
+["2/26","민 3-4장"],
+["2/27","민 5-6장"],
+["2/28","민 7-8장"],
+["3/1","민 9-11장"],
+["3/2","민 12-14장"],
+["3/3","민 15-16장"],
+["3/4","민 17-19장"],
+["3/5","민 20-21장"],
+["3/6","민 22-23장"],
+["3/7","민 24-26:14"],
+["3/8","민 26:15-27장"],
+["3/9","민 28-29장"],
+["3/10","민 30-31장"],
+["3/11","민 32-33:49"],
+["3/12","민 33:50-36장"],
+["3/13","신 1-2장"],
+["3/14","신 3:1-4:43"],
+["3/15","신 4:44-6장"],
+["3/16","신 7:1-9:21"],
+["3/17","신 9:22-11장"],
+["3/18","신 12-13장"],
+["3/19","신 14-16장"],
+["3/20","신 17-20장"],
+["3/21","신 21-23장"],
+["3/22","신 24-26장"],
+["3/23","신 27-28장"],
+["3/24","신 29:1-31:13"],
+["3/25","신 31:14-32:47"],
+["3/26","신 32:48-34장"],
+["3/27","수 1-2장"],
+["3/28","수 3-4장"],
+["3/29","수 5:1-7:9"],
+["3/30","수 7:10-8장"],
+["3/31","수 9-10장"],
+["4/1","수 11-12장"],
+["4/2","수 13-14장"],
+["4/3","수 15-17장"],
+["4/4","수 18-19장"],
+["4/5","수 20-21장"],
+["4/6","수 22장"],
+["4/7","수 23-24장"],
+["4/8","삿 1-3:6"],
+["4/9","삿 3:7-4장"],
+["4/10","삿 5-6장"],
+["4/11","삿 7-8장"],
+["4/12","삿 9:1-10:5"],
+["4/13","삿 10:6-12장"],
+["4/14","삿 13-15:8"],
+["4/15","삿 15:9-16장"],
+["4/16","삿 17-18장"],
+["4/17","삿 19:1-20:18"],
+["4/18","삿 20:19-21장"],
+["4/19","룻 1-2장"],
+["4/20","룻 3-4장"],
+["4/21","삼상 1-2:26"],
+["4/22","삼상 2:27-4장"],
+["4/23","삼상 5-7장"],
+["4/24","삼상 8-10장"],
+["4/25","삼상 11-13장"],
+["4/26","삼상 14-15장"],
+["4/27","삼상 16-17장"],
+["4/28","삼상 18-20장"],
+["4/29","삼상 21-23장"],
+["4/30","삼상 24-26장"],
+["5/1","삼상 27-31장"],
+["5/2","삼하 1-2장"],
+["5/3","삼하 3-4장"],
+["5/4","삼하 5-7장"],
+["5/5","삼하 8-10장"],
+["5/6","삼하 11-12장"],
+["5/7","삼하 13-14:20"],
+["5/8","삼하 14:21-16:14"],
+["5/9","삼하 16:15-17장"],
+["5/10","삼하 18:1-19:8"],
+["5/11","삼하 19:9-20:10"],
+["5/12","삼하 20:11-21장"],
+["5/13","삼하 22-23:8"],
+["5/14","삼하 23:9-24장"],
+["5/15","왕상 1장"],
+["5/16","왕상 2장"],
+["5/17","왕상 3-4장"],
+["5/18","왕상 5-6장"],
+["5/19","왕상 7장"],
+["5/20","왕상 8장"],
+["5/21","왕상 9-10장"],
+["5/22","왕상 11장"],
+["5/23","왕상 12:1-13:19"],
+["5/24","왕상 13:20-14장"],
+["5/25","왕상 15-16장"],
+["5/26","왕상 17-18:24"],
+["5/27","왕상 18:25-19장"],
+["5/28","왕상 20-21장"],
+["5/29","왕상 22장"],
+["5/30","왕하 1:1-2:18"],
+["5/31","왕하 2:19-4:25"],
+["6/1","왕하 4:26-6:13"],
+["6/2","왕하 6:14-8장"],
+["6/3","왕하 9-10장"],
+["6/4","왕하 11-12장"],
+["6/5","왕하 13:1-15:12"],
+["6/6","왕하 15:13-17장"],
+["6/7","왕하 18-19:7"],
+["6/8","왕하 19:8-20장"],
+["6/9","왕하 21-23:30"],
+["6/10","왕하 23:31-25장"],
+["6/11","대상 1-2:17"],
+["6/12","대상 2:18-3장"],
+["6/13","대상 4-5장"],
+["6/14","대상 6장"],
+["6/15","대상 7-8장"],
+["6/16","대상 9장"],
+["6/17","대상 10-12장"],
+["6/18","대상 13-15장"],
+["6/19","대상 16-17장"],
+["6/20","대상 18-21장"],
+["6/21","대상 22-24장"],
+["6/22","대상 25-27장"],
+["6/23","대상 28-29장"],
+["6/24","대하 1-5:1"],
+["6/25","대하 5:2-7장"],
+["6/26","대하 8-9장"],
+["6/27","대하 10-12장"],
+["6/28","대하 13-16장"],
+["6/29","대하 17-19장"],
+["6/30","대하 20-21장"],
+["7/1","대하 22-23장"],
+["7/2","대하 24-25장"],
+["7/3","대하 26-28장"],
+["7/4","대하 29-30장"],
+["7/5","대하 31-32장"],
+["7/6","대하 33-34장"],
+["7/7","대하 35-36장"],
+["7/8","스 1-2장"],
+["7/9","스 3-4장"],
+["7/10","스 5-6장"],
+["7/11","스 7-8장"],
+["7/12","스 9-10장"],
+["7/13","느 1-3장"],
+["7/14","느 4-6장"],
+["7/15","느 7-8장"],
+["7/16","느 9-10장"],
+["7/17","느 11-12:26"],
+["7/18","느 12:27-13장"],
+["7/19","에 1-2장"],
+["7/20","에 3-5장"],
+["7/21","에 6-10장"],
+["7/22","욥 1-3장"],
+["7/23","욥 4-7장"],
+["7/24","욥 8-10장"],
+["7/25","욥 11-14장"],
+["7/26","욥 15-17장"],
+["7/27","욥 18-20장"],
+["7/28","욥 21-24장"],
+["7/29","욥 25-29장"],
+["7/30","욥 30-31장"],
+["7/31","욥 32-34장"],
+["8/1","욥 35-37장"],
+["8/2","욥 38-40장"],
+["8/3","욥 41-42장"],
+["8/4","시 1-6편"],
+["8/5","시 7-10편"],
+["8/6","시 11-17편"],
+["8/7","시 18-20편"],
+["8/8","시 21-25편"],
+["8/9","시 26-30편"],
+["8/10","시 31-33편"],
+["8/11","시 34-36편"],
+["8/12","시 37-38편"],
+["8/13","시 39-41편"],
+["8/14","시 42-45편"],
+["8/15","시 46-49편"],
+["8/16","시 50-52편"],
+["8/17","시 53-58편"],
+["8/18","시 59-64편"],
+["8/19","시 65-68편"],
+["8/20","시 69-72편"],
+["8/21","시 73-77편"],
+["8/22","시 78-79편"],
+["8/23","시 80-85편"],
+["8/24","시 86-89편"],
+["8/25","시 90-97편"],
+["8/26","시 98-102편"],
+["8/27","시 103-106편"],
+["8/28","시 107-110편"],
+["8/29","시 111-118편"],
+["8/30","시 119:1-88"],
+["8/31","시 119:89-176"],
+["9/1","시 120-131편"],
+["9/2","시 132-134편"],
+["9/3","시 135-139편"],
+["9/4","시 140-144편"],
+["9/5","시 145-150편"],
+["9/6","잠 1-3장"],
+["9/7","잠 4-6장"],
+["9/8","잠 7-9장"],
+["9/9","잠 10-12장"],
+["9/10","잠 13-15장"],
+["9/11","잠 16-18장"],
+["9/12","잠 19-22:16"],
+["9/13","잠 22:17-24장"],
+["9/14","잠 25-29장"],
+["9/15","잠 30-31장"],
+["9/16","전 1:1-5:9"],
+["9/17","전 5:10-7:22"],
+["9/18","전 7:23-12장"],
+["9/19","아 1-4장"],
+["9/20","아 5-8장"],
+["9/21","사 1-3장"],
+["9/22","사 4-6장"],
+["9/23","사 7-9:7"],
+["9/24","사 9:8-10장"],
+["9/25","사 11-16장"],
+["9/26","사 17-20장"],
+["9/27","사 21-23장"],
+["9/28","사 24-27장"],
+["9/29","사 28-29장"],
+["9/30","사 30-31장"],
+["10/1","사 32-33장"],
+["10/2","사 34-36장"],
+["10/3","사 37-38장"],
+["10/4","사 39-40장"],
+["10/5","사 41-42장"],
+["10/6","사 43-44장"],
+["10/7","사 45-47장"],
+["10/8","사 48-49장"],
+["10/9","사 50-52:12"],
+["10/10","사 52:13-55장"],
+["10/11","사 56-58장"],
+["10/12","사 59-61장"],
+["10/13","사 62-64장"],
+["10/14","사 65-66장"],
+["10/15","렘 1-3장"],
+["10/16","렘 4-5장"],
+["10/17","렘 6-7장"],
+["10/18","렘 8-10장"],
+["10/19","렘 11-13장"],
+["10/20","렘 14-15장"],
+["10/21","렘 16-17장"],
+["10/22","렘 18-20장"],
+["10/23","렘 21-22장"],
+["10/24","렘 23-24장"],
+["10/25","렘 25-26:19"],
+["10/26","렘 26:20-28장"],
+["10/27","렘 29장"],
+["10/28","렘 30-31장"],
+["10/29","렘 32-33장"],
+["10/30","렘 34-35장"],
+["10/31","렘 36-37장"],
+["11/1","렘 38-39장"],
+["11/2","렘 40-41장"],
+["11/3","렘 42-43:4"],
+["11/4","렘 43:5-45장"],
+["11/5","렘 46-47장"],
+["11/6","렘 48:1-49:6"],
+["11/7","렘 49:7-39"],
+["11/8","렘 50장"],
+["11/9","렘 51장"],
+["11/10","렘 52장"],
+["11/11","애 1-2장"],
+["11/12","애 3-5장"],
+["11/13","겔 1-3장"],
+["11/14","겔 4-7장"],
+["11/15","겔 8-11장"],
+["11/16","겔 12-13장"],
+["11/17","겔 14장"],
+["11/18","겔 15-16장"],
+["11/19","겔 17-19장"],
+["11/20","겔 20:1-44"],
+["11/21","겔 20:45-21장"],
+["11/22","겔 22장"],
+["11/23","겔 23-24장"],
+["11/24","겔 25-27장"],
+["11/25","겔 28-29장"],
+["11/26","겔 30-31장"],
+["11/27","겔 32장"],
+["11/28","겔 33장"],
+["11/29","겔 34-35장"],
+["11/30","겔 36장"],
+["12/1","겔 37장"],
+["12/2","겔 38-39장"],
+["12/3","겔 40-41장"],
+["12/4","겔 42-43장"],
+["12/5","겔 44-45장"],
+["12/6","겔 46-47:12"],
+["12/7","겔 47:13-48장"],
+["12/8","단 1장"],
+["12/9","단 2장"],
+["12/10","단 3-4장"],
+["12/11","단 5-6장"],
+["12/12","단 7-8장"],
+["12/13","단 9-10장"],
+["12/14","단 11-12장"],
+["12/15","호 1-3장"],
+["12/16","호 4-7장"],
+["12/17","호 8-11:11"],
+["12/18","호 11:12-14장"],
+["12/19","욜 1-3장"],
+["12/20","암 1-4장"],
+["12/21","암 5-9장"],
+["12/21","옵 1장"],
+["12/22","욘 1-4장"],
+["12/23","미 1-5:1"],
+["12/24","미 5:2-7장"],
+["12/25","나 1-3장"],
+["12/26","합 1-3장"],
+["12/27","습 1-3장"],
+["12/27","학 1-2장"],
+["12/28","슥 1-6:8"],
+["12/29","슥 6:9-10장"],
+["12/30","슥 11-14장"],
+["12/31","말 1-4장"],
+];
+
+const NT_RAW = [
+["1/1","마 1장"],
+["1/2","마 2장"],
+["1/3","마 3장"],
+["1/4","마 4장"],
+["1/5","마 5:1-20"],
+["1/6","마 5:21-48"],
+["1/7","마 6장"],
+["1/8","마 7장"],
+["1/9","마 8:1-17"],
+["1/10","마 8:18-34"],
+["1/11","마 9:1-17"],
+["1/12","마 9:18-38"],
+["1/13","마 10장"],
+["1/14","마 11장"],
+["1/15","마 12:1-21"],
+["1/16","마 12:22-50"],
+["1/17","마 13:1-30"],
+["1/18","마 13:31-58"],
+["1/19","마 14장"],
+["1/20","마 15장"],
+["1/21","마 16장"],
+["1/22","마 17장"],
+["1/23","마 18:1-20"],
+["1/24","마 18:21-35"],
+["1/25","마 19:1-15"],
+["1/26","마 19:16-30"],
+["1/27","마 20:1-16"],
+["1/28","마 20:17-34"],
+["1/29","마 21:1-22"],
+["1/30","마 21:23-46"],
+["1/31","마 22:1-22"],
+["2/1","마 22:23-46"],
+["2/2","마 23:1-22"],
+["2/3","마 23:23-39"],
+["2/4","마 24:1-28"],
+["2/5","마 24:29-51"],
+["2/6","마 25:1-30"],
+["2/7","마 25:31-46"],
+["2/8","마 26:1-30"],
+["2/9","마 26:31-56"],
+["2/10","마 26:57-75"],
+["2/11","마 27:1-26"],
+["2/12","마 27:27-61"],
+["2/13","마 27:62-28장"],
+["2/14","막 1:1-20"],
+["2/15","막 1:21-45"],
+["2/16","막 2장"],
+["2/17","막 3장"],
+["2/18","막 4:1-20"],
+["2/19","막 4:21-41"],
+["2/20","막 5:1-20"],
+["2/21","막 5:21-43"],
+["2/22","막 6:1-29"],
+["2/23","막 6:30-56"],
+["2/24","막 7장"],
+["2/25","막 8장"],
+["2/26","막 9:1-29"],
+["2/27","막 9:30-50"],
+["2/28","막 10:1-22"],
+["3/1","막 10:23-52"],
+["3/2","막 11장"],
+["3/3","막 12:1-17"],
+["3/4","막 12:18-44"],
+["3/5","막 13장"],
+["3/6","막 14:1-26"],
+["3/7","막 14:27-52"],
+["3/8","막 14:53-72"],
+["3/9","막 15:1-20"],
+["3/10","막 15:21-47"],
+["3/11","막 16장"],
+["3/12","눅 1:1-23"],
+["3/13","눅 1:24-56"],
+["3/14","눅 1:57-80"],
+["3/15","눅 2:1-20"],
+["3/16","눅 2:21-52"],
+["3/17","눅 3:1-22"],
+["3/18","눅 3:23-38"],
+["3/19","눅 4:1-13"],
+["3/20","눅 4:14-30"],
+["3/21","눅 4:31-44"],
+["3/22","눅 5:1-16"],
+["3/23","눅 5:17-39"],
+["3/24","눅 6:1-26"],
+["3/25","눅 6:27-49"],
+["3/26","눅 7:1-23"],
+["3/27","눅 7:24-50"],
+["3/28","눅 8:1-25"],
+["3/29","눅 8:26-56"],
+["3/30","눅 9:1-17"],
+["3/31","눅 9:18-36"],
+["4/1","눅 9:37-62"],
+["4/2","눅 10:1-20"],
+["4/3","눅 10:21-37"],
+["4/4","눅 10:38-11:13"],
+["4/5","눅 11:14-32"],
+["4/6","눅 11:33-54"],
+["4/7","눅 12:1-21"],
+["4/8","눅 12:22-40"],
+["4/9","눅 12:41-59"],
+["4/10","눅 13:1-21"],
+["4/11","눅 13:22-35"],
+["4/12","눅 14장"],
+["4/13","눅 15장"],
+["4/14","눅 16:1-18"],
+["4/15","눅 16:19-17:10"],
+["4/16","눅 17:11-37"],
+["4/17","눅 18:1-17"],
+["4/18","눅 18:18-43"],
+["4/19","눅 19:1-27"],
+["4/20","눅 19:28-46"],
+["4/21","눅 19:47-20:18"],
+["4/22","눅 20:19-47"],
+["4/23","눅 21장"],
+["4/24","눅 22:1-38"],
+["4/25","눅 22:39-71"],
+["4/26","눅 23:1-32"],
+["4/27","눅 23:33-56"],
+["4/28","눅 24:1-12"],
+["4/29","눅 24:13-53"],
+["4/30","요 1:1-34"],
+["5/1","요 1:35-51"],
+["5/2","요 2장"],
+["5/3","요 3장"],
+["5/4","요 4:1-26"],
+["5/5","요 4:27-54"],
+["5/6","요 5:1-18"],
+["5/7","요 5:19-47"],
+["5/8","요 6:1-21"],
+["5/9","요 6:22-71"],
+["5/10","요 7:1-24"],
+["5/11","요 7:25-53"],
+["5/12","요 8:1-30"],
+["5/13","요 8:31-59"],
+["5/14","요 9:1-41"],
+["5/15","요 10:1-18"],
+["5/16","요 10:19-42"],
+["5/17","요 11:1-16"],
+["5/18","요 11:17-57"],
+["5/19","요 12:1-19"],
+["5/20","요 12:20-50"],
+["5/21","요 13:1-20"],
+["5/22","요 13:21-38"],
+["5/23","요 14장"],
+["5/24","요 15장"],
+["5/25","요 16장"],
+["5/26","요 17장"],
+["5/27","요 18:1-27"],
+["5/28","요 18:28-19:16"],
+["5/29","요 19:17-42"],
+["5/30","요 20장"],
+["5/31","요 21장"],
+["6/1","행 1:1-14"],
+["6/2","행 1:15-26"],
+["6/3","행 2:1-13"],
+["6/4","행 2:14-47"],
+["6/5","행 3장"],
+["6/6","행 4:1-12"],
+["6/7","행 4:13-31"],
+["6/8","행 4:32-5:11"],
+["6/9","행 5:12-32"],
+["6/10","행 5:33-42"],
+["6/11","행 6장"],
+["6/12","행 7:1-19"],
+["6/13","행 7:20-40"],
+["6/14","행 7:41-8:3"],
+["6/15","행 8:4-25"],
+["6/16","행 8:26-40"],
+["6/17","행 9:1-30"],
+["6/18","행 9:31-43"],
+["6/19","행 10:1-23"],
+["6/20","행 10:24-48"],
+["6/21","행 11:1-18"],
+["6/22","행 11:19-30"],
+["6/23","행 12장"],
+["6/24","행 13:1-15"],
+["6/25","행 13:16-41"],
+["6/26","행 13:42-14:7"],
+["6/27","행 14:8-28"],
+["6/28","행 15:1-35"],
+["6/29","행 15:36-16:15"],
+["6/30","행 16:16-40"],
+["7/1","행 17장"],
+["7/2","행 18:1-23"],
+["7/3","행 18:24-19:20"],
+["7/4","행 19:21-41"],
+["7/5","행 20:1-16"],
+["7/6","행 20:17-38"],
+["7/7","행 21:1-16"],
+["7/8","행 21:17-40"],
+["7/9","행 22장"],
+["7/10","행 23:1-11"],
+["7/11","행 23:12-30"],
+["7/12","행 23:31-24:9"],
+["7/13","행 24:10-27"],
+["7/14","행 25장"],
+["7/15","행 26장"],
+["7/16","행 27:1-26"],
+["7/17","행 27:27-44"],
+["7/18","행 28:1-15"],
+["7/19","행 28:16-31"],
+["7/20","롬 1:1-17"],
+["7/21","롬 1:18-32"],
+["7/22","롬 2:1-16"],
+["7/23","롬 2:17-29"],
+["7/24","롬 3:1-20"],
+["7/25","롬 3:21-4장"],
+["7/26","롬 5장"],
+["7/27","롬 6장"],
+["7/28","롬 7장"],
+["7/29","롬 8:1-17"],
+["7/30","롬 8:18-39"],
+["7/31","롬 9:1-18"],
+["8/1","롬 9:19-33"],
+["8/2","롬 10장"],
+["8/3","롬 11:1-12"],
+["8/4","롬 11:13-36"],
+["8/5","롬 12장"],
+["8/6","롬 13장"],
+["8/7","롬 14장"],
+["8/8","롬 15:1-13"],
+["8/9","롬 15:14-33"],
+["8/10","롬 16장"],
+["8/11","고전 1:1-9"],
+["8/12","고전 1:10-31"],
+["8/13","고전 2장"],
+["8/14","고전 3장"],
+["8/15","고전 4장"],
+["8/16","고전 5장"],
+["8/17","고전 6장"],
+["8/18","고전 7:1-24"],
+["8/19","고전 7:25-40"],
+["8/20","고전 8장"],
+["8/21","고전 9장"],
+["8/22","고전 10:1-11:1"],
+["8/23","고전 11:2-34"],
+["8/24","고전 12장"],
+["8/25","고전 13장"],
+["8/26","고전 14장"],
+["8/27","고전 15:1-28"],
+["8/28","고전 15:29-58"],
+["8/29","고전 16장"],
+["8/30","고후 1:1-2:11"],
+["8/31","고후 2:12-3장"],
+["9/1","고후 4:1-5:7"],
+["9/2","고후 5:8-19"],
+["9/3","고후 5:20-6장"],
+["9/4","고후 7장"],
+["9/5","고후 8장"],
+["9/6","고후 9장"],
+["9/7","고후 10장"],
+["9/8","고후 11장"],
+["9/9","고후 12장"],
+["9/10","고후 13장"],
+["9/11","갈 1:1-17"],
+["9/12","갈 1:18-2장"],
+["9/13","갈 3장"],
+["9/14","갈 4:1-5:1"],
+["9/15","갈 5:2-15"],
+["9/16","갈 5:16-6장"],
+["9/17","엡 1장"],
+["9/18","엡 2장"],
+["9/19","엡 3장"],
+["9/20","엡 4장"],
+["9/21","엡 5장"],
+["9/22","엡 6장"],
+["9/23","빌 1:1-11"],
+["9/24","빌 1:12-30"],
+["9/25","빌 2:1-18"],
+["9/26","빌 2:19-30"],
+["9/27","빌 3장"],
+["9/28","빌 4장"],
+["9/29","골 1:1-14"],
+["9/30","골 1:15-29"],
+["10/1","골 2:1-15"],
+["10/2","골 2:16-3:4"],
+["10/3","골 3:5-4:6"],
+["10/4","골 4:7-18"],
+["10/5","살전 1장"],
+["10/6","살전 2장"],
+["10/7","살전 3장"],
+["10/8","살전 4장"],
+["10/9","살전 5장"],
+["10/10","살후 1장"],
+["10/11","살후 2장"],
+["10/12","살후 3장"],
+["10/13","딤전 1장"],
+["10/14","딤전 2장"],
+["10/15","딤전 3장"],
+["10/16","딤전 4장"],
+["10/17","딤전 5장"],
+["10/18","딤전 6장"],
+["10/19","딤후 1:1-2:2"],
+["10/20","딤후 2:3-26"],
+["10/21","딤후 3장"],
+["10/22","딤후 4장"],
+["10/23","딛 1장"],
+["10/24","딛 2:1-14"],
+["10/25","딛 2:15-3장"],
+["10/26","몬 1장"],
+["10/27","히 1장"],
+["10/28","히 2장"],
+["10/29","히 3장"],
+["10/30","히 4:1-13"],
+["10/31","히 4:14-5:10"],
+["11/1","히 5:11-6장"],
+["11/2","히 7:1-10"],
+["11/3","히 7:11-28"],
+["11/4","히 8장"],
+["11/5","히 9:1-22"],
+["11/6","히 9:23-10:18"],
+["11/7","히 10:19-39"],
+["11/8","히 11:1-16"],
+["11/9","히 11:17-40"],
+["11/10","히 12:1-13"],
+["11/11","히 12:14-29"],
+["11/12","히 13장"],
+["11/13","약 1:1-11"],
+["11/14","약 1:12-27"],
+["11/15","약 2:1-13"],
+["11/16","약 2:14-26"],
+["11/17","약 3장"],
+["11/18","약 4:1-5:6"],
+["11/19","약 5:7-20"],
+["11/20","벧전 1:1-12"],
+["11/21","벧전 1:13-25"],
+["11/22","벧전 2:1-10"],
+["11/23","벧전 2:11-3:7"],
+["11/24","벧전 3:8-22"],
+["11/25","벧전 4장"],
+["11/26","벧전 5장"],
+["11/27","벧후 1:1-11"],
+["11/28","벧후 1:12-21"],
+["11/29","벧후 2장"],
+["11/30","벧후 3장"],
+["12/1","요일 1:1-2:6"],
+["12/2","요일 2:7-17"],
+["12/3","요일 2:18-29"],
+["12/4","요일 3:1-10"],
+["12/5","요일 3:11-24"],
+["12/6","요일 4:1-5:3"],
+["12/7","요일 5:4-21"],
+["12/8","요이 1장"],
+["12/9","요삼 1장"],
+["12/10","유 1장"],
+["12/11","계 1장"],
+["12/12","계 2장"],
+["12/13","계 3장"],
+["12/14","계 4장"],
+["12/15","계 5장"],
+["12/16","계 6장"],
+["12/17","계 7장"],
+["12/18","계 8장"],
+["12/19","계 9장"],
+["12/20","계 10:1-11:2"],
+["12/21","계 11:3-19"],
+["12/22","계 12장"],
+["12/23","계 13장"],
+["12/24","계 14장"],
+["12/25","계 15-16장"],
+["12/26","계 17장"],
+["12/27","계 18장"],
+["12/28","계 19장"],
+["12/29","계 20장"],
+["12/30","계 21장"],
+["12/31","계 22장"],
+];
+
+const OT_BOOK_ORDER = ["창세기","출애굽기","레위기","민수기","신명기","여호수아","사사기","룻기","사무엘상","사무엘하","열왕기상","열왕기하","역대상","역대하","에스라","느헤미야","에스더","욥기","시편","잠언","전도서","아가","이사야","예레미야","예레미야애가","에스겔","다니엘","호세아","요엘","아모스","오바댜","요나","미가","나훔","하박국","스바냐","학개","스가랴","말라기"];
+const NT_BOOK_ORDER = ["마태복음","마가복음","누가복음","요한복음","사도행전","로마서","고린도전서","고린도후서","갈라디아서","에베소서","빌립보서","골로새서","데살로니가전서","데살로니가후서","디모데전서","디모데후서","디도서","빌레몬서","히브리서","야고보서","베드로전서","베드로후서","요한일서","요한이서","요한삼서","유다서","요한계시록"];
+const MONTH_ORDER = ["1월","2월","3월","4월","5월","6월","7월","8월","9월","10월","11월","12월"];
+
+const LS_OT = [["창세기",120],["출애굽기",185],["레위기",64],["민수기",53],["신명기",30],["여호수아",15],["사사기",10],["룻기",8],["사무엘상하",38],["열왕기상하",23],["역대상하",13],["에스라",5],["느헤미야",5],["에스더",3],["욥기",38],["시편",45],["잠언",8],["전도서",2],["아가",10],["이사야",54],["예레미야",40],["예레미야애가",4],["에스겔",24],["다니엘",17],["호세아",8],["요엘",7],["아모스",3],["오바댜",1],["요나",1],["미가",4],["나훔",1],["하박국",3],["스바냐",1],["학개",1],["스가랴",15],["말라기",3]];
+const LS_NT = [["마태복음",72],["마가복음",70],["누가복음",79],["요한복음",51],["사도행전",72],["로마서",69],["고린도전서",69],["고린도후서",59],["갈라디아서",46],["에베소서",97],["빌립보서",62],["골로새서",65],["데살로니가전서",24],["데살로니가후서",7],["디모데전서",12],["디모데후서",8],["디도서",6],["빌레몬서",1],["히브리서",69],["야고보서",14],["베드로전서",34],["베드로후서",13],["요한일서",40],["요한이서",2],["요한삼서",1],["유다서",5],["요한계시록",68]];
+
+/* ---------- id 부여 & 그룹핑 ---------- */
+function bookOf(text){
+  const token = text.trim().split(/\s+/)[0];
+  return ABBR[token] || token;
+}
+function withIds(raw, prefix){
+  const seen = {};
+  return raw.map(([date,text])=>{
+    const k = date;
+    const idx = seen[k] = (seen[k]||0);
+    seen[k]++;
+    return { id:`${prefix}-${date}-${idx}`, date, text, book: bookOf(text) };
+  });
+}
+const OT_ITEMS = withIds(OT_RAW,'ot');
+const NT_ITEMS = withIds(NT_RAW,'nt');
+
+function groupItems(items, keyFn, order){
+  const map = {};
+  order.forEach(k=>map[k]=[]);
+  items.forEach(it=>{
+    const k = keyFn(it);
+    if(!map[k]) map[k]=[];
+    map[k].push(it);
+  });
+  return order.map(k=>({name:k, entries: map[k]}));
+}
+function monthKey(it){ return parseInt(it.date.split('/')[0],10)+"월"; }
+
+const BIBLE_BY_BOOK = {
+  ot: groupItems(OT_ITEMS, it=>it.book, OT_BOOK_ORDER),
+  nt: groupItems(NT_ITEMS, it=>it.book, NT_BOOK_ORDER)
+};
+const BIBLE_BY_MONTH = {
+  ot: groupItems(OT_ITEMS, it=>monthKey(it)+" · 구약", MONTH_ORDER.map(m=>m+" · 구약")),
+  nt: groupItems(NT_ITEMS, it=>monthKey(it)+" · 신약", MONTH_ORDER.map(m=>m+" · 신약"))
+};
+
+function lsGroup(list){
+  return list.map(([name,n])=>({
+    name,
+    entries: Array.from({length:n},(_,i)=>({id:`${name}-${i+1}`, label:String(i+1)}))
+  }));
+}
+const LS_BY_BOOK = { ot: lsGroup(LS_OT), nt: lsGroup(LS_NT) };
+
+const TRACKS = {
+  bible:{ key:"progress:bible", mode:"days",
+    note:"각 항목은 업로드하신 '성경 1년 1독 진도표' 파일의 날짜별 본문 구간을 그대로 반영했습니다. 체크하면 이미 읽은 부분은 아래로 내려가고, 아직 읽지 않은 부분이 위로 올라와요." },
+  ls:{ key:"progress:lifestudy", mode:"chapters", ot:LS_BY_BOOK.ot, nt:LS_BY_BOOK.nt,
+       note:"라이프스터디 단계 수는 진도표 자료를 기준으로 정리했습니다. 빌레몬서·요한삼서·요나처럼 표에 별도 번호가 없던 짧은 책은 1단계로 임시 지정했으니 실제 교재와 다르면 참고만 해주세요." }
+};
+
+let STATE = { bible:[], ls:[] };
+let FILTER = { bible:"all", ls:"all" };
+let VIEWMODE = { bible:"month" };
+let OPEN = { bible:new Set(), ls:new Set() };
+
+/* ---------- storage (Claude 아티팩트에서는 window.storage, 일반 웹 호스팅에서는 localStorage로 자동 전환) ---------- */
+const HAS_CLAUDE_STORAGE = (typeof window.storage !== "undefined" && window.storage && typeof window.storage.get === "function");
+async function loadState(trackId){
+  const key = TRACKS[trackId].key;
+  try{
+    if(HAS_CLAUDE_STORAGE){
+      const res = await window.storage.get(key, false);
+      STATE[trackId] = res && res.value ? JSON.parse(res.value) : [];
+    }else{
+      const raw = localStorage.getItem(key);
+      STATE[trackId] = raw ? JSON.parse(raw) : [];
+    }
+  }catch(e){ STATE[trackId] = []; }
+}
+async function saveState(trackId){
+  const key = TRACKS[trackId].key;
+  try{
+    if(HAS_CLAUDE_STORAGE){
+      await window.storage.set(key, JSON.stringify(STATE[trackId]), false);
+    }else{
+      localStorage.setItem(key, JSON.stringify(STATE[trackId]));
+    }
+  }catch(e){ console.error("save failed", e); }
+}
+function readSet(trackId){ return new Set(STATE[trackId]||[]); }
+function toggleId(trackId, id){
+  const set = readSet(trackId);
+  if(set.has(id)) set.delete(id); else set.add(id);
+  STATE[trackId] = [...set];
+}
+
+/* ---------- helpers ---------- */
+function countRead(trackId, entries){
+  const set = readSet(trackId);
+  return entries.filter(e=>set.has(e.id)).length;
+}
+function totalsFor(trackId, groups){
+  let total=0, done=0;
+  groups.forEach(g=>{ total+=g.entries.length; done+=countRead(trackId,g.entries); });
+  return {total,done};
+}
+function pct(done,total){ return total? Math.round(done/total*100) : 0; }
+function currentGroups(trackId){
+  if(trackId==="bible") return VIEWMODE.bible==="month" ? BIBLE_BY_MONTH : BIBLE_BY_BOOK;
+  return TRACKS[trackId];
+}
+
+/* ---------- render ---------- */
+function render(trackId){
+  const t = TRACKS[trackId];
+  const groups = currentGroups(trackId);
+  const all = [...groups.ot.map(g=>({test:"ot",...g})), ...groups.nt.map(g=>({test:"nt",...g}))];
+  const otTot = totalsFor(trackId, groups.ot);
+  const ntTot = totalsFor(trackId, groups.nt);
+  const allTot = { total: otTot.total+ntTot.total, done: otTot.done+ntTot.done };
+
+  const filtered = FILTER[trackId]==="all" ? all : all.filter(g=>g.test===FILTER[trackId]);
+  const readSetObj = readSet(trackId);
+  const bookViewOnly = trackId==="bible" && VIEWMODE.bible==="book";
+
+  const rows = filtered.map(g=>{
+    const name = g.name, test = g.test, entriesRaw = g.entries;
+    const done = countRead(trackId, entriesRaw);
+    const n = entriesRaw.length;
+    const p = pct(done,n);
+    const isComplete = n>0 && done===n;
+
+    if(bookViewOnly){
+      return `
+      <div class="book static" data-book="${name}">
+        <div class="book-head book-head-static">
+          <span class="book-testament-tag ${test}"></span>
+          <span class="book-name">${name}</span>
+          <span class="book-bar-track"><span class="book-bar-fill" style="width:${p}%"></span></span>
+          <span class="book-count">${isComplete ? '<span class="badge-done">완독</span>' : `${done}/${n} · ${p}%`}</span>
+        </div>
+      </div>`;
+    }
+
+    const isOpen = OPEN[trackId].has(name);
+    let entries = entriesRaw;
+    if(t.mode === "days"){
+      entries = entriesRaw.slice().sort((a,b)=>(readSetObj.has(a.id)?1:0)-(readSetObj.has(b.id)?1:0));
+    }
+
+    let inner;
+    if(t.mode === "chapters"){
+      inner = `<div class="chapter-grid">` + entries.map(e=>
+        `<button class="ch-btn entry-toggle ${readSetObj.has(e.id)?'read':''}" data-track="${trackId}" data-id="${e.id}">${e.label}</button>`
+      ).join("") + `</div>`;
+    }else{
+      inner = `<div class="entry-list">` + entries.map(e=>{
+        const isRead = readSetObj.has(e.id);
+        return `<div class="entry-row entry-toggle ${isRead?'read':''}" data-track="${trackId}" data-id="${e.id}">
+          <span class="entry-check">${isRead?'✓':''}</span>
+          <span class="entry-date">${e.date}</span>
+          <span class="entry-text">${e.text}</span>
+        </div>`;
+      }).join("") + `</div>`;
+    }
+
+    return `
+    <div class="book ${isOpen?'open':''}" data-book="${name}">
+      <div class="book-head" data-track="${trackId}" data-book="${name}">
+        <span class="book-testament-tag ${test}"></span>
+        <span class="book-name">${name}</span>
+        <span class="book-bar-track"><span class="book-bar-fill" style="width:${p}%"></span></span>
+        <span class="book-count">${isComplete ? '<span class="badge-done">완독</span>' : `${done}/${n} · ${p}%`}</span>
+        <span class="chevron">▸</span>
+      </div>
+      <div class="chapters">
+        ${inner}
+        <div class="book-tools">
+          <button data-act="all" data-track="${trackId}" data-book="${name}">전체 읽음</button>
+          <button data-act="reset" data-track="${trackId}" data-book="${name}">초기화</button>
+        </div>
+      </div>
+    </div>`;
+  }).join("");
+
+  const noteHtml = t.note ? `<div class="note">${t.note}</div>` : "";
+
+  const viewToggleHtml = trackId==="bible" ? `
+    <div class="toolbar view-toolbar">
+      <div class="chips">
+        <span class="chip ${VIEWMODE.bible==='month'?'active':''}" data-track="bible" data-viewmode="month">월별</span>
+        <span class="chip ${VIEWMODE.bible==='book'?'active':''}" data-track="bible" data-viewmode="book">권별</span>
+      </div>
+    </div>` : "";
+
+  const html = `
+    <div class="ledger">
+      <div class="ledger-row">
+        <span class="ledger-label">전체</span>
+        <span class="ledger-bar-track"><span class="ledger-bar-fill" style="width:${pct(allTot.done,allTot.total)}%"></span></span>
+        <span class="ledger-pct">${allTot.total && allTot.done===allTot.total ? '<span class="badge-done">완독</span>' : `<b>${pct(allTot.done,allTot.total)}%</b> · ${allTot.done}/${allTot.total}`}</span>
+      </div>
+      <div class="ledger-row">
+        <span class="ledger-label">구약</span>
+        <span class="ledger-bar-track"><span class="ledger-bar-fill" style="width:${pct(otTot.done,otTot.total)}%"></span></span>
+        <span class="ledger-pct">${otTot.total && otTot.done===otTot.total ? '<span class="badge-done">완독</span>' : `<b>${pct(otTot.done,otTot.total)}%</b> · ${otTot.done}/${otTot.total}`}</span>
+      </div>
+      <div class="ledger-row">
+        <span class="ledger-label">신약</span>
+        <span class="ledger-bar-track"><span class="ledger-bar-fill" style="width:${pct(ntTot.done,ntTot.total)}%"></span></span>
+        <span class="ledger-pct">${ntTot.total && ntTot.done===ntTot.total ? '<span class="badge-done">완독</span>' : `<b>${pct(ntTot.done,ntTot.total)}%</b> · ${ntTot.done}/${ntTot.total}`}</span>
+      </div>
+    </div>
+
+    ${viewToggleHtml}
+
+    <div class="toolbar">
+      <div class="chips">
+        <span class="chip ${FILTER[trackId]==='all'?'active':''}" data-track="${trackId}" data-filter="all">전체</span>
+        <span class="chip ${FILTER[trackId]==='ot'?'active':''}" data-track="${trackId}" data-filter="ot">구약</span>
+        <span class="chip ${FILTER[trackId]==='nt'?'active':''}" data-track="${trackId}" data-filter="nt">신약</span>
+      </div>
+      <div class="toolbar-actions">
+        ${bookViewOnly ? "" : `
+        <button class="linkbtn" data-act="expand-all" data-track="${trackId}">모두 펼치기</button>
+        <button class="linkbtn" data-act="collapse-all" data-track="${trackId}">모두 접기</button>
+        `}
+      </div>
+    </div>
+
+    <div class="toc">${rows}</div>
+    ${noteHtml}
+  `;
+  document.getElementById(trackId==="bible"?"panel-bible":"panel-ls").innerHTML = html;
+}
+
+/* ---------- events ---------- */
+const ACCENT = { bible:"#1849B5", ls:"#1B7A48" };
+
+document.addEventListener("click", async (e)=>{
+  const tabBtn = e.target.closest(".tabbtn");
+  if(tabBtn){
+    document.querySelectorAll(".tabbtn").forEach(b=>b.classList.remove("active"));
+    document.querySelectorAll(".panel").forEach(p=>p.classList.remove("active"));
+    tabBtn.classList.add("active");
+    const id = tabBtn.dataset.tab;
+    document.getElementById(id==="bible"?"panel-bible":"panel-ls").classList.add("active");
+    document.querySelector("header.title-block").style.borderBottomColor = ACCENT[id];
+    document.body.style.background = id==="bible" ? "#FCFBFF" : "#FAFDFB";
+    return;
+  }
+
+  const viewChip = e.target.closest("[data-viewmode]");
+  if(viewChip){
+    VIEWMODE[viewChip.dataset.track] = viewChip.dataset.viewmode;
+    OPEN[viewChip.dataset.track].clear();
+    render(viewChip.dataset.track);
+    return;
+  }
+
+  const chip = e.target.closest(".chip[data-filter]");
+  if(chip){
+    FILTER[chip.dataset.track] = chip.dataset.filter;
+    render(chip.dataset.track);
+    return;
+  }
+
+  const bulk = e.target.closest("[data-act='expand-all'],[data-act='collapse-all']");
+  if(bulk){
+    const trackId = bulk.dataset.track;
+    const groups = currentGroups(trackId);
+    const names = [...groups.ot, ...groups.nt].map(b=>b.name);
+    if(bulk.dataset.act==="expand-all") names.forEach(n=>OPEN[trackId].add(n));
+    else OPEN[trackId].clear();
+    render(trackId);
+    return;
+  }
+
+  const head = e.target.closest(".book-head");
+  if(head && !head.classList.contains("book-head-static")){
+    const trackId = head.dataset.track, book = head.dataset.book;
+    if(OPEN[trackId].has(book)) OPEN[trackId].delete(book); else OPEN[trackId].add(book);
+    render(trackId);
+    return;
+  }
+
+  const tool = e.target.closest(".book-tools button");
+  if(tool){
+    const trackId = tool.dataset.track, book = tool.dataset.book;
+    const groups = currentGroups(trackId);
+    const g = [...groups.ot, ...groups.nt].find(b=>b.name===book);
+    const set = readSet(trackId);
+    if(tool.dataset.act==="all"){
+      g.entries.forEach(en=>set.add(en.id));
+    }else{
+      g.entries.forEach(en=>set.delete(en.id));
+    }
+    STATE[trackId] = [...set];
+    await saveState(trackId);
+    render(trackId);
+    return;
+  }
+});
+
+/* ---------- drag-select checking ---------- */
+let DRAG = { active:false, trackId:null, mode:null, touched:new Set() };
+
+function applyVisual(el, checked){
+  el.classList.toggle("read", checked);
+  const checkSpan = el.querySelector && el.querySelector(".entry-check");
+  if(checkSpan) checkSpan.textContent = checked ? "✓" : "";
+}
+function startDrag(el){
+  const trackId = el.dataset.track;
+  const wasChecked = el.classList.contains("read");
+  DRAG = { active:true, trackId, mode: wasChecked ? "uncheck" : "check", touched:new Set() };
+  applyVisual(el, DRAG.mode==="check");
+  DRAG.touched.add(el.dataset.id);
+}
+function dragOver(el){
+  if(!DRAG.active || !el || el.dataset.track !== DRAG.trackId) return;
+  const id = el.dataset.id;
+  if(DRAG.touched.has(id)) return;
+  applyVisual(el, DRAG.mode==="check");
+  DRAG.touched.add(id);
+}
+async function endDrag(){
+  if(!DRAG.active) return;
+  const trackId = DRAG.trackId, mode = DRAG.mode, touched = DRAG.touched;
+  DRAG = { active:false, trackId:null, mode:null, touched:new Set() };
+  if(touched.size===0) return;
+  const set = readSet(trackId);
+  touched.forEach(id => mode==="check" ? set.add(id) : set.delete(id));
+  STATE[trackId] = [...set];
+  await saveState(trackId);
+  render(trackId);
+}
+
+document.addEventListener("mousedown", (e)=>{
+  const el = e.target.closest(".entry-toggle");
+  if(!el) return;
+  e.preventDefault();
+  startDrag(el);
+});
+document.addEventListener("mouseover", (e)=>{
+  if(!DRAG.active) return;
+  const el = e.target.closest(".entry-toggle");
+  if(el) dragOver(el);
+});
+document.addEventListener("mouseup", ()=>{ if(DRAG.active) endDrag(); });
+
+document.addEventListener("touchstart", (e)=>{
+  const el = e.target.closest(".entry-toggle");
+  if(!el) return;
+  startDrag(el);
+}, { passive:true });
+document.addEventListener("touchmove", (e)=>{
+  if(!DRAG.active) return;
+  const touch = e.touches[0];
+  const under = document.elementFromPoint(touch.clientX, touch.clientY);
+  const el = under && under.closest(".entry-toggle");
+  if(el) dragOver(el);
+});
+document.addEventListener("touchend", ()=>{ if(DRAG.active) endDrag(); });
+
+/* ---------- init ---------- */
+(async function init(){
+  await loadState("bible");
+  await loadState("ls");
+  render("bible");
+  render("ls");
+})();
+</script>
+</body>
+</html>
