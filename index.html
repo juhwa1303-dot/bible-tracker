@@ -2,10 +2,12 @@
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#0E9488">
 <title>성경 라이프스터디 진도표</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Gothic+A1:wght@700;800&family=IBM+Plex+Sans+KR:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <style>
   :root{
     --bg:#FCFBFF;
@@ -33,54 +35,230 @@
     -webkit-font-smoothing:antialiased;
     transition:background .25s ease;
   }
-  .wrap{max-width:760px;margin:0 auto;padding:40px 22px 90px;}
+  .wrap{max-width:760px;margin:0 auto;padding:18px 18px calc(86px + env(safe-area-inset-bottom));}
 
-  /* ---- header ---- */
-  header.title-block{
-    text-align:center;
-    padding-bottom:26px;
-    margin-bottom:28px;
-    border-bottom:3px solid var(--bible);
-    transition:border-color .25s ease;
+  /* ---- 상단 헤더 (고정, 컴팩트) ---- */
+  .app-header{
+    position:sticky;top:0;z-index:20;
+    display:flex;align-items:center;justify-content:space-between;
+    padding:calc(12px + env(safe-area-inset-top)) 18px 12px;
+    background:rgba(252,251,255,0.92);
+    backdrop-filter:blur(8px);
+    -webkit-backdrop-filter:blur(8px);
+    border-bottom:1px solid var(--hairline);
   }
-  header.title-block h1{
+  .app-header-title-group{display:flex;align-items:center;gap:8px;}
+  .header-icon{display:flex;align-items:center;color:var(--ink);}
+  .header-icon svg{width:20px;height:20px;}
+  .app-header h1{
     font-family:'Gothic A1',sans-serif;
     font-weight:700;
-    font-size:33px;
-    margin:0 0 10px;
+    font-size:18px;
+    margin:0;
     letter-spacing:-0.01em;
   }
-  header.title-block p{
-    margin:0 auto;
-    max-width:420px;
+  .account-btn{
+    width:36px;height:36px;flex-shrink:0;
+    border-radius:50%;
+    border:1.5px solid var(--hairline);
+    background:#fff;
     color:var(--ink-soft);
-    font-size:14.5px;
+    display:flex;align-items:center;justify-content:center;
+    cursor:pointer;
+    padding:0;
+  }
+  .account-btn svg{width:19px;height:19px;}
+  .account-btn.signed-in{
+    background:var(--bible);border-color:var(--bible);color:#fff;
+    font-family:'Gothic A1',sans-serif;font-weight:700;font-size:15px;
   }
 
-  /* ---- tabs (filled, square) ---- */
-  .tabbar{
+  /* ---- 계정 패널 (평소엔 접혀 있음) ---- */
+  .auth-panel{
+    max-height:0;
+    overflow:hidden;
+    transition:max-height .25s ease;
+    background:#fff;
+    border-bottom:1px solid var(--hairline);
+  }
+  .auth-panel.open{ max-height:340px; }
+  .auth-bar{
+    padding:16px 18px;
+    font-size:13px;
+  }
+  .auth-bar .auth-row{
+    display:flex;align-items:center;gap:8px;flex-wrap:wrap;
+  }
+  .auth-bar input{
+    font-family:'IBM Plex Sans KR',sans-serif;
+    font-size:15px;
+    padding:11px 12px;
+    border:1.5px solid var(--hairline);
+    border-radius:8px;
+    background:#fff;
+    color:var(--ink);
+    min-width:150px;
+    flex:1;
+  }
+  .auth-bar button{
+    font-family:'IBM Plex Sans KR',sans-serif;
+    font-weight:600;
+    font-size:14px;
+    padding:11px 16px;
+    border-radius:8px;
+    border:none;
+    background:var(--ink);
+    color:#fff;
+    cursor:pointer;
+  }
+  .auth-bar button.secondary{
+    background:none;
+    color:var(--ink-soft);
+    border:1.5px solid var(--hairline);
+  }
+  .auth-bar .auth-msg{
+    margin-top:8px;
+    font-size:12px;
+    color:var(--ink-soft);
+  }
+  .auth-bar .auth-msg.error{color:var(--ls);}
+  .auth-bar .signed-in{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;}
+  .auth-bar .signed-in .who{color:var(--ink-soft);}
+  .auth-bar .signed-in .who b{color:var(--ink);}
+
+
+  /* ---- 오늘의 추구 카드 ---- */
+  .today-card{
+    margin-bottom:20px;
+    padding:16px 18px;
+    border-radius:14px;
+    background:var(--bible-tint);
+    border:1.5px solid var(--bible-tint2);
+    box-shadow:0 2px 10px rgba(24,73,181,0.06);
+    position:relative;
+  }
+  .today-card.ls{
+    background:var(--ls-tint);
+    border-color:var(--ls-tint2);
+    box-shadow:0 2px 10px rgba(27,122,72,0.06);
+  }
+  .today-label-row{display:flex;align-items:flex-start;justify-content:space-between;gap:8px;margin-bottom:8px;}
+  .today-card .today-label{
+    font-size:11.5px;font-weight:700;color:var(--bible);letter-spacing:0.02em;
+  }
+  .today-card.ls .today-label{color:var(--ls);}
+  .today-pace-tag{
+    display:inline-block;margin-left:6px;font-size:10.5px;font-weight:700;
+    padding:2px 8px;border-radius:999px;background:rgba(255,255,255,0.7);color:inherit;
+  }
+  .settings-gear{
+    background:none;border:none;cursor:pointer;
+    font-size:15px;line-height:1;color:var(--ink-faint);
+    padding:2px 4px;flex-shrink:0;
+  }
+  .settings-gear:hover{color:var(--ink-soft);}
+  .settings-pop{
+    background:#fff;border:1.5px solid var(--hairline);border-radius:10px;
+    padding:12px 14px;margin-bottom:10px;font-size:12.5px;
+  }
+  .settings-pop-title{font-weight:700;color:var(--ink);margin-bottom:6px;}
+  .settings-pop label{display:flex;align-items:center;gap:6px;margin-bottom:6px;color:var(--ink-soft);}
+  .settings-pop input[type="number"]{
+    font-family:'IBM Plex Sans KR',sans-serif;font-size:13px;padding:4px 6px;
+    border:1.5px solid var(--hairline);border-radius:6px;
+  }
+  .settings-pop-note{font-size:11px;color:var(--ink-faint);margin-top:4px;}
+  .settings-pop button{
+    font-family:'IBM Plex Sans KR',sans-serif;font-weight:600;font-size:12.5px;
+    padding:7px 14px;border-radius:7px;border:none;background:var(--ink);color:#fff;cursor:pointer;
+  }
+  .today-card .entry-row{background:#fff;margin-bottom:6px;border-radius:10px;}
+  .today-card .entry-row:last-child{margin-bottom:0;}
+
+  /* ---- 그룹 탭 ---- */
+  .group{ }
+  .group .panel-inner input, .group .panel-inner select{
+    font-family:'IBM Plex Sans KR',sans-serif;
+    font-size:15px;
+    padding:11px 12px;
+    border:1.5px solid var(--hairline);
+    border-radius:8px;
+    background:#fff;
+    color:var(--ink);
+  }
+  .group .panel-inner button{
+    font-family:'IBM Plex Sans KR',sans-serif;
+    font-weight:600;
+    font-size:14px;
+    padding:11px 16px;
+    border-radius:8px;
+    border:none;
+    background:#7A4FC2;
+    color:#fff;
+    cursor:pointer;
+  }
+  .group .panel-inner button.secondary{
+    background:none;color:var(--ink-soft);border:1.5px solid var(--hairline);
+  }
+  .group .panel-inner button.danger{ background:var(--ls); }
+  .group-section{margin-bottom:22px;padding:18px 18px;border-radius:14px;background:#FAF9FE;border:1.5px solid #EAE3F7;}
+  .group-section h3{font-family:'Gothic A1',sans-serif;font-size:15px;margin:0 0 12px;}
+  .group-row{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:8px;}
+  .mode-options{display:flex;flex-direction:column;gap:8px;margin:10px 0 14px;}
+  .mode-options label{display:flex;gap:8px;align-items:flex-start;font-size:13.5px;color:var(--ink-soft);cursor:pointer;}
+  .mode-options label b{color:var(--ink);}
+  .group-card{background:#fff;border:1.5px solid var(--hairline);border-radius:14px;padding:16px 18px;margin-bottom:14px;box-shadow:0 2px 10px rgba(20,20,30,0.04);}
+  .group-card .group-card-head{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:10px;}
+  .group-card .group-card-head h4{font-family:'Gothic A1',sans-serif;font-size:15px;margin:0;}
+  .group-mode-badge{font-size:11px;font-weight:700;padding:3px 9px;border-radius:999px;background:#EFE7FA;color:#7A4FC2;}
+  .invite-row{display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--ink-soft);margin-bottom:10px;flex-wrap:wrap;}
+  .invite-code{font-family:monospace;font-weight:700;background:var(--hairline-soft);padding:3px 8px;border-radius:6px;color:var(--ink);letter-spacing:0.05em;}
+  .member-row{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--hairline-soft);font-size:13.5px;}
+  .member-row:last-child{border-bottom:none;}
+  .member-bars{display:flex;gap:14px;font-size:11.5px;color:var(--ink-soft);}
+  .member-bars b{color:var(--ink);}
+  .group-empty{color:var(--ink-faint);font-size:13px;}
+
+  /* ---- 하단 고정 네비게이션 ---- */
+  .bottom-nav{
+    position:fixed;left:0;right:0;bottom:0;z-index:20;
     display:flex;
-    justify-content:center;
-    gap:12px;
-    margin-bottom:28px;
+    background:rgba(255,255,255,0.96);
+    backdrop-filter:blur(8px);
+    -webkit-backdrop-filter:blur(8px);
+    border-top:2px solid #0E9488;
+    padding:6px 6px calc(6px + env(safe-area-inset-bottom));
+    transition:border-top-color .2s ease;
   }
   .tabbtn{
-    background:var(--hairline-soft);
+    flex:1;
+    display:flex;flex-direction:column;align-items:center;gap:3px;
+    background:none;
     border:none;
-    padding:13px 28px;
-    border-radius:6px;
-    font-family:'Gothic A1',sans-serif;
-    font-weight:700;
-    font-size:16px;
-    color:var(--ink-soft);
+    padding:8px 4px 6px;
+    border-radius:10px;
+    font-family:'IBM Plex Sans KR',sans-serif;
+    font-weight:600;
+    font-size:10.5px;
+    color:var(--ink-faint);
     cursor:pointer;
-    transition:background .15s,color .15s;
+    transition:color .15s;
   }
-  .tabbtn.active[data-tab="bible"]{background:var(--bible);color:#fff;}
-  .tabbtn.active[data-tab="ls"]{background:var(--ls);color:#fff;}
+  .tabbtn svg{width:22px;height:22px;}
+  .tabbtn.active[data-tab="home"]{color:#0E9488;}
+  .tabbtn.active[data-tab="bible"]{color:var(--bible);}
+  .tabbtn.active[data-tab="ls"]{color:var(--ls);}
+  .tabbtn.active[data-tab="group"]{color:#7A4FC2;}
 
   .panel{display:none;}
   .panel.active{display:block;}
+  .home-section{margin-bottom:28px;}
+  .home-section-label{
+    display:flex;align-items:center;gap:8px;
+    font-family:'Gothic A1',sans-serif;font-weight:800;font-size:15px;
+    margin-bottom:10px;
+  }
+  .home-section-label svg{width:18px;height:18px;}
 
   /* ---- ledger summary ---- */
   .ledger{
@@ -90,6 +268,56 @@
   }
   .bible .ledger{background:var(--bible-wash);}
   .ls .ledger{background:var(--ls-wash);}
+
+  /* ---- 원형 게이지 ---- */
+  .gauge-row{display:flex;justify-content:space-around;align-items:flex-start;flex-wrap:wrap;gap:14px;}
+  .gauge-thirds{display:flex;align-items:center;}
+  .gauge-thirds .gauge-item{flex:1;min-width:0;padding:0 10px;}
+  .gauge-thirds .gauge-item:not(:last-child){border-right:1px solid rgba(0,0,0,0.08);}
+  .gauge-item{display:flex;flex-direction:column;align-items:center;gap:6px;}
+  .gauge{position:relative;}
+  .gauge svg{display:block;}
+  .gauge-label{
+    position:absolute;inset:0;
+    display:flex;align-items:center;justify-content:center;
+    font-family:'Gothic A1',sans-serif;font-weight:800;
+    font-size:13px;color:var(--ink);
+  }
+  .gauge-item-label{font-size:12px;font-weight:700;color:var(--ink-soft);}
+  .gauge-item-count{font-size:10.5px;color:var(--ink-faint);font-variant-numeric:tabular-nums;}
+
+  /* ---- 전체 (풀폭) ---- */
+  .ledger-total-head{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:8px;}
+  .ledger-total-label{font-size:13px;font-weight:700;color:var(--ink-soft);}
+  .ledger-total-pct{font-family:'Gothic A1',sans-serif;font-size:24px;font-weight:800;color:var(--ink);}
+  .ledger-total-count{margin-top:6px;font-size:11px;color:var(--ink-faint);text-align:right;font-variant-numeric:tabular-nums;}
+
+  /* ---- 전체(왼쪽, 전체 높이) + 구약·신약(오른쪽, 한 줄씩) ---- */
+  .ledger-halves{display:flex;align-items:stretch;gap:16px;}
+  .ledger-half-total{
+    flex:1;min-width:0;
+    display:flex;align-items:center;justify-content:center;gap:14px;
+    padding-right:16px;
+    border-right:1px solid rgba(0,0,0,0.08);
+  }
+  .ledger-half-split{
+    flex:1;min-width:0;
+    display:flex;flex-direction:column;justify-content:center;gap:12px;
+  }
+  .ledger-half-split .split-row{padding:0;border-bottom:none;justify-content:flex-start;}
+
+  /* ---- 전체/구약/신약: 왼쪽 텍스트, 오른쪽 게이지 (동일한 줄 형태) ---- */
+  .split-rows{margin-top:14px;padding-top:14px;border-top:1px solid rgba(0,0,0,0.06);}
+  .split-rows.no-border{margin-top:0;padding-top:0;border-top:none;}
+  .split-row{display:flex;align-items:center;justify-content:flex-start;gap:12px;padding:10px 0;border-bottom:1px solid rgba(0,0,0,0.05);}
+  .split-row:last-child{border-bottom:none;}
+  .split-row-text{display:flex;flex-direction:column;gap:3px;}
+  .split-row-label{font-size:13px;font-weight:700;color:var(--ink-soft);}
+  .split-row-count{font-size:11px;color:var(--ink-faint);font-variant-numeric:tabular-nums;}
+  .split-row-total{padding:12px 0 16px;}
+  .split-row-total .split-row-label{font-size:15px;color:var(--ink);}
+  .split-row-total .split-row-count{font-size:12px;}
+
   .ledger-row{
     display:flex;
     align-items:center;
@@ -104,15 +332,16 @@
     color:var(--ink-soft);
   }
   .ledger-bar-track{
+    display:block;
     flex:1;
-    height:9px;
+    height:10px;
     border-radius:5px;
     position:relative;
     overflow:hidden;
+    background:#fff;
+    border:1.5px solid var(--hairline);
   }
-  .bible .ledger-bar-track{background:var(--bible-tint2);}
-  .ls .ledger-bar-track{background:var(--ls-tint2);}
-  .ledger-bar-fill{height:100%;width:0%;border-radius:5px;transition:width .35s ease;}
+  .ledger-bar-fill{display:block;height:100%;width:0%;border-radius:4px;transition:width .35s ease;}
   .bible .ledger-bar-fill{background:var(--bible);}
   .ls .ledger-bar-fill{background:var(--ls);}
   .ledger-pct{
@@ -129,6 +358,19 @@
     font-weight:700;
     margin-right:5px;
   }
+  .ledger-split{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:16px;
+    margin-top:14px;
+    padding-top:14px;
+    border-top:1px solid rgba(0,0,0,0.06);
+  }
+  .ledger-half{display:flex;flex-direction:column;gap:6px;}
+  .ledger-half .half-label{font-size:11.5px;font-weight:700;color:var(--ink-soft);}
+  .ledger-half .half-pct{font-family:'Gothic A1',sans-serif;font-size:20px;font-weight:700;color:var(--ink);}
+  .ledger-half .half-count{font-size:11px;color:var(--ink-faint);font-variant-numeric:tabular-nums;}
+  .ledger-half .ledger-bar-track{height:7px;}
   .bible .ledger-pct b{color:var(--bible);}
   .ls .ledger-pct b{color:var(--ls);}
 
@@ -188,11 +430,13 @@
   .book-testament-tag{
     width:9px;height:9px;flex-shrink:0;
     border-radius:50%;
+    background:var(--hairline);
   }
-  .bible .book-testament-tag.ot{background:var(--bible);opacity:.4;}
-  .bible .book-testament-tag.nt{background:var(--bible);}
-  .ls .book-testament-tag.ot{background:var(--ls);opacity:.4;}
-  .ls .book-testament-tag.nt{background:var(--ls);}
+  .bible .book-testament-tag{background:var(--bible-tint2);}
+  .ls .book-testament-tag{background:var(--ls-tint2);}
+  .bible .book.complete .book-testament-tag{background:var(--bible);}
+  .ls .book.complete .book-testament-tag{background:var(--ls);}
+  .book.divider-start{border-top:2px solid var(--ink-faint);}
   .book-name{
     font-family:'Gothic A1',sans-serif;
     font-weight:700;
@@ -204,11 +448,12 @@
   .bible .book.open .book-name{color:var(--bible);}
   .ls .book.open .book-name{color:var(--ls);}
   .book-bar-track{
-    flex:1;height:5px;border-radius:3px;position:relative;overflow:hidden;
+    display:block;
+    flex:1;height:7px;border-radius:4px;position:relative;overflow:hidden;
+    background:#fff;
+    border:1.5px solid var(--hairline);
   }
-  .bible .book-bar-track{background:var(--bible-tint2);}
-  .ls .book-bar-track{background:var(--ls-tint2);}
-  .book-bar-fill{height:100%;width:0%;border-radius:3px;}
+  .book-bar-fill{display:block;height:100%;width:0%;border-radius:2.5px;transition:width .3s ease,background .2s ease;}
   .bible .book-bar-fill{background:var(--bible);}
   .ls .book-bar-fill{background:var(--ls);}
   .book-count{
@@ -227,6 +472,16 @@
   .book.static{border-bottom:1px solid var(--hairline);}
   .book.open .chevron{transform:rotate(90deg);}
 
+  /* ---- 월별 보기: 구약/신약 나란히, 게이지 없음 ---- */
+  .month-row .book-head{gap:10px;}
+  .month-count{width:auto;flex:1;font-size:11.5px;}
+  .month-columns{display:flex;gap:16px;}
+  .month-col{flex:1;min-width:0;}
+  .month-col-label{
+    font-size:11px;font-weight:700;color:var(--ink-soft);
+    margin-bottom:8px;
+  }
+
   .chapters{
     display:none;
     padding:8px 6px 22px 23px;
@@ -236,18 +491,19 @@
   /* chapter grid (life study) */
   .chapter-grid{
     display:grid;
-    grid-template-columns:repeat(auto-fill,minmax(30px,1fr));
-    gap:6px;
+    grid-template-columns:repeat(auto-fill,minmax(38px,1fr));
+    gap:8px;
     margin-bottom:12px;
     user-select:none;
   }
   .ch-btn{
     aspect-ratio:1;
+    min-height:38px;
     border-radius:50%;
     border:1.5px solid var(--hairline);
     background:#fff;
     color:var(--ink-faint);
-    font-size:11px;
+    font-size:12px;
     font-weight:600;
     display:flex;align-items:center;justify-content:center;
     cursor:pointer;
@@ -265,21 +521,25 @@
     display:flex;
     align-items:center;
     gap:12px;
-    padding:8px 8px;
+    padding:11px 10px;
+    min-height:44px;
     border-radius:10px;
     cursor:pointer;
     transition:background .12s;
   }
   .bible .entry-row:hover{background:var(--bible-wash);}
+  .ls .entry-row:hover{background:var(--ls-wash);}
   .entry-row.read{opacity:.55;}
   .entry-check{
-    width:21px;height:21px;flex-shrink:0;
+    width:24px;height:24px;flex-shrink:0;
     border-radius:50%;
     border:2px solid var(--bible-tint2);
     display:flex;align-items:center;justify-content:center;
-    font-size:11px;color:#fff;font-weight:700;
+    font-size:12px;color:#fff;font-weight:700;
   }
   .entry-row.read .entry-check{background:var(--bible);border-color:var(--bible);}
+  .ls .entry-check{border-color:var(--ls-tint2);}
+  .ls .entry-row.read .entry-check{background:var(--ls);border-color:var(--ls);}
   .entry-date{
     width:44px;flex-shrink:0;
     font-size:11.5px;font-weight:700;
@@ -289,6 +549,7 @@
     padding:3px 0;
     text-align:center;
   }
+  .ls .entry-date{color:var(--ls);background:var(--ls-tint);}
   .entry-text{font-size:13.5px;color:var(--ink);flex:1;}
   .entry-row.read .entry-text{text-decoration:line-through;color:var(--ink-faint);}
 
@@ -309,12 +570,11 @@
   }
   .bible .note{background:var(--bible-wash);}
   .ls .note{background:var(--ls-wash);}
+  .group .note{background:#FAF9FE;margin-top:0;}
 
   @media (max-width:480px){
-    .wrap{padding:28px 16px 70px;}
-    header.title-block h1{font-size:26px;}
-    .tabbar{gap:8px;}
-    .tabbtn{padding:9px 16px;font-size:14.5px;}
+    .wrap{padding:14px 14px calc(84px + env(safe-area-inset-bottom));}
+    .app-header h1{font-size:16px;}
     .book-name{width:82px;font-size:14px;}
     .ledger-label{width:40px;}
     .ledger-pct{width:118px;}
@@ -324,22 +584,45 @@
 </style>
 </head>
 <body>
-<div class="wrap">
-
-  <header class="title-block">
-    <h1>성경 라이프스터디 진도표</h1>
-    <p>성경 1년 1독과 라이프스터디 읽기 진도를 월별·권별,<br>구약·신약별, 전체로 확인해요.</p>
-  </header>
-
-  <div class="tabbar">
-    <button class="tabbtn active" data-tab="bible">성경 1년 1독</button>
-    <button class="tabbtn" data-tab="ls">라이프스터디</button>
+<header class="app-header">
+  <div class="app-header-title-group">
+    <span id="header-icon" class="header-icon"></span>
+    <h1 id="header-title">홈</h1>
   </div>
-
-  <div id="panel-bible" class="panel active bible"></div>
-  <div id="panel-ls" class="panel ls"></div>
-
+  <button id="account-btn" class="account-btn" aria-label="계정">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="8" r="3.6"/><path d="M4.5 20c0-4.1 3.4-6.5 7.5-6.5s7.5 2.4 7.5 6.5"/></svg>
+  </button>
+</header>
+<div id="auth-panel" class="auth-panel">
+  <div id="auth-bar" class="auth-bar"></div>
 </div>
+
+<div class="wrap">
+  <div id="panel-home" class="panel active home"></div>
+  <div id="panel-bible" class="panel bible"></div>
+  <div id="panel-ls" class="panel ls"></div>
+  <div id="panel-group" class="panel group"></div>
+</div>
+
+<nav class="bottom-nav">
+  <button class="tabbtn active" data-tab="home">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3.5 11 12 4l8.5 7"/><path d="M5.5 9.5V20h13V9.5"/></svg>
+    <span>홈</span>
+  </button>
+  <button class="tabbtn" data-tab="bible">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 5.2c2.3-1.1 5.2-1.1 7 0v14.1c-1.8-1.1-4.7-1.1-7 0V5.2Z"/><path d="M20 5.2c-2.3-1.1-5.2-1.1-7 0v14.1c1.8-1.1 4.7-1.1 7 0V5.2Z"/></svg>
+    <span>1년 1독</span>
+  </button>
+  <button class="tabbtn" data-tab="ls">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 3.2 3 8l9 4.8 9-4.8-9-4.8Z"/><path d="M3 13l9 4.8 9-4.8"/><path d="M3 17.4l9 4.8 9-4.8"/></svg>
+    <span>라이프스터디</span>
+  </button>
+  <button class="tabbtn" data-tab="group">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="9" cy="8.2" r="3.1"/><path d="M3.2 20c0-3.3 2.6-5.9 5.8-5.9s5.8 2.6 5.8 5.9"/><circle cx="17" cy="9.4" r="2.5"/><path d="M14.4 14.5c2.5.4 4.6 2.5 4.6 5.5"/></svg>
+    <span>함께 읽기</span>
+  </button>
+</nav>
+
 
 <script>
 /* ================= 원본 진도표 데이터 (1/1 ~ 12/31) ================= */
@@ -1100,7 +1383,7 @@ const NT_BOOK_ORDER = ["마태복음","마가복음","누가복음","요한복�
 const MONTH_ORDER = ["1월","2월","3월","4월","5월","6월","7월","8월","9월","10월","11월","12월"];
 
 const LS_OT = [["창세기",120],["출애굽기",185],["레위기",64],["민수기",53],["신명기",30],["여호수아",15],["사사기",10],["룻기",8],["사무엘상하",38],["열왕기상하",23],["역대상하",13],["에스라",5],["느헤미야",5],["에스더",3],["욥기",38],["시편",45],["잠언",8],["전도서",2],["아가",10],["이사야",54],["예레미야",40],["예레미야애가",4],["에스겔",24],["다니엘",17],["호세아",8],["요엘",7],["아모스",3],["오바댜",1],["요나",1],["미가",4],["나훔",1],["하박국",3],["스바냐",1],["학개",1],["스가랴",15],["말라기",3]];
-const LS_NT = [["마태복음",72],["마가복음",70],["누가복음",79],["요한복음",51],["사도행전",72],["로마서",69],["고린도전서",69],["고린도후서",59],["갈라디아서",46],["에베소서",97],["빌립보서",62],["골로새서",65],["데살로니가전서",24],["데살로니가후서",7],["디모데전서",12],["디모데후서",8],["디도서",6],["빌레몬서",1],["히브리서",69],["야고보서",14],["베드로전서",34],["베드로후서",13],["요한일서",40],["요한이서",2],["요한삼서",1],["유다서",5],["요한계시록",68]];
+const LS_NT = [["마태복음",72],["마가복음",70],["누가복음",79],["요한복음",51],["사도행전",72],["로마서",69],["고린도전서",69],["고린도후서",59],["갈라디아서",46],["에베소서",97],["빌립보서",62],["골로새서",65],["데살로니가전서",24],["데살로니가후서",7],["디모데전서",12],["디모데후서",8],["디도서",6],["빌레몬서",2],["히브리서",69],["야고보서",14],["베드로전서",34],["베드로후서",13],["요한일서",40],["요한이서",2],["요한삼서",2],["유다서",5],["요한계시록",68]];
 
 /* ---------- id 부여 & 그룹핑 ---------- */
 function bookOf(text){
@@ -1160,10 +1443,190 @@ let FILTER = { bible:"all", ls:"all" };
 let VIEWMODE = { bible:"month" };
 let OPEN = { bible:new Set(), ls:new Set() };
 
-/* ---------- storage (Claude 아티팩트에서는 window.storage, 일반 웹 호스팅에서는 localStorage로 자동 전환) ---------- */
+/* ---------- Supabase 연결 (아래 두 값을 Supabase 프로젝트 정보로 채워주세요) ---------- */
+const SUPABASE_URL = "https://flwhndozusrphpcrxphl.supabase.co";       // 예: https://xxxxxxxx.supabase.co
+const SUPABASE_ANON_KEY = "sb_publishable_XZRyONx6zBSQeXipFd5ehQ_UxeYzTTF";
+
+let supabaseClient = null;
+let currentUser = null;
+if(typeof supabase !== "undefined" && SUPABASE_URL.startsWith("http")){
+  try{
+    supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+      auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true }
+    });
+  }
+  catch(e){ console.error("Supabase 초기화 실패", e); }
+}
+
+let authMode = "signin"; // "signin" | "forgot" | "reset"
+
+function renderAuthBar(){
+  const el = document.getElementById("auth-bar");
+  if(!el) return;
+
+  const acctBtn = document.getElementById("account-btn");
+  if(acctBtn){
+    if(currentUser){
+      acctBtn.classList.add("signed-in");
+      acctBtn.textContent = (currentUser.email||"?").charAt(0).toUpperCase();
+    }else{
+      acctBtn.classList.remove("signed-in");
+      acctBtn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="8" r="3.6"/><path d="M4.5 20c0-4.1 3.4-6.5 7.5-6.5s7.5 2.4 7.5 6.5"/></svg>`;
+    }
+  }
+
+  if(!supabaseClient){
+    el.innerHTML = `<div class="auth-msg">아직 계정 연결이 안 돼 있어요 — 코드 상단의 SUPABASE_URL / SUPABASE_ANON_KEY를 채우면 로그인해서 여러 기기에 진도를 동기화할 수 있어요. 지금은 이 브라우저에만 저장돼요.</div>`;
+    return;
+  }
+
+  if(currentUser){
+    el.innerHTML = `
+      <div class="signed-in">
+        <span class="who"><b>${currentUser.email}</b>로 로그인됨 · 진도가 계정에 저장돼요</span>
+        <button class="secondary" data-authact="signout">로그아웃</button>
+      </div>`;
+    return;
+  }
+
+  if(authMode === "reset"){
+    el.innerHTML = `
+      <form class="auth-row" id="auth-form" autocomplete="on">
+        <input type="password" id="auth-new-password" name="new-password" placeholder="새 비밀번호 (6자 이상)" autocomplete="new-password">
+        <button type="submit" data-authact="dopasswordupdate">비밀번호 변경</button>
+      </form>
+      <div class="auth-msg" id="auth-msg">이메일로 받은 링크를 통해 들어오셨어요. 새 비밀번호를 설정해주세요.</div>
+    `;
+    return;
+  }
+
+  if(authMode === "forgot"){
+    el.innerHTML = `
+      <form class="auth-row" id="auth-form" autocomplete="on">
+        <input type="email" id="auth-email" name="email" placeholder="가입한 이메일" autocomplete="email">
+        <button type="submit" data-authact="sendreset">재설정 링크 보내기</button>
+        <button type="button" class="secondary" data-authact="backtosignin">로그인으로 돌아가기</button>
+      </form>
+      <div class="auth-msg" id="auth-msg">가입할 때 쓴 이메일로 비밀번호 재설정 링크를 보내드려요.</div>
+    `;
+    return;
+  }
+
+  el.innerHTML = `
+    <form class="auth-row" id="auth-form" autocomplete="on">
+      <input type="email" id="auth-email" name="email" placeholder="이메일" autocomplete="username">
+      <input type="password" id="auth-password" name="password" placeholder="비밀번호 (6자 이상)" autocomplete="current-password">
+      <button type="submit" data-authact="signin">로그인</button>
+      <button type="button" class="secondary" data-authact="signup">회원가입</button>
+    </form>
+    <div class="auth-msg" id="auth-msg">
+      로그인하면 이 브라우저에 아이디·비밀번호가 저장되고, 다음에 자동으로 로그인돼요.
+      <button type="button" class="linkbtn" data-authact="forgot" style="padding:0;margin-left:6px;">비밀번호를 잊으셨나요?</button>
+    </div>
+  `;
+}
+
+async function doAuth(mode){
+  const emailEl = document.getElementById("auth-email");
+  const pwEl = document.getElementById("auth-password");
+  const msg = document.getElementById("auth-msg");
+  const email = emailEl ? emailEl.value.trim() : "";
+  const password = pwEl ? pwEl.value : "";
+  if(!email || !password){
+    if(msg){ msg.textContent = "이메일과 비밀번호를 입력해주세요."; msg.classList.add("error"); }
+    return;
+  }
+  if(msg){ msg.classList.remove("error"); msg.textContent = mode==="signup" ? "가입 처리 중..." : "로그인 중..."; }
+  try{
+    const { data, error } = mode==="signup"
+      ? await supabaseClient.auth.signUp({ email, password })
+      : await supabaseClient.auth.signInWithPassword({ email, password });
+    if(error) throw error;
+    if(mode==="signup" && data && !data.session){
+      if(msg) msg.textContent = "가입 확인 이메일을 보냈어요. 메일함을 확인하고 링크를 눌러주세요.";
+      return;
+    }
+  }catch(e){
+    if(msg){ msg.textContent = e.message || "오류가 발생했어요."; msg.classList.add("error"); }
+  }
+}
+
+async function doSendReset(){
+  const emailEl = document.getElementById("auth-email");
+  const msg = document.getElementById("auth-msg");
+  const email = emailEl ? emailEl.value.trim() : "";
+  if(!email){
+    if(msg){ msg.textContent = "이메일을 입력해주세요."; msg.classList.add("error"); }
+    return;
+  }
+  if(msg){ msg.classList.remove("error"); msg.textContent = "재설정 링크를 보내는 중..."; }
+  try{
+    const { error } = await supabaseClient.auth.resetPasswordForEmail(email, { redirectTo: window.location.href });
+    if(error) throw error;
+    if(msg) msg.textContent = "재설정 링크를 이메일로 보냈어요. 메일함을 확인하고 링크를 눌러주세요.";
+  }catch(e){
+    if(msg){ msg.textContent = e.message || "오류가 발생했어요."; msg.classList.add("error"); }
+  }
+}
+
+async function doPasswordUpdate(){
+  const pwEl = document.getElementById("auth-new-password");
+  const msg = document.getElementById("auth-msg");
+  const newPassword = pwEl ? pwEl.value : "";
+  if(!newPassword || newPassword.length < 6){
+    if(msg){ msg.textContent = "6자 이상 비밀번호를 입력해주세요."; msg.classList.add("error"); }
+    return;
+  }
+  if(msg){ msg.classList.remove("error"); msg.textContent = "변경하는 중..."; }
+  try{
+    const { error } = await supabaseClient.auth.updateUser({ password: newPassword });
+    if(error) throw error;
+    authMode = "signin";
+    if(msg) msg.textContent = "비밀번호가 변경됐어요.";
+    renderAuthBar();
+  }catch(e){
+    if(msg){ msg.textContent = e.message || "오류가 발생했어요."; msg.classList.add("error"); }
+  }
+}
+
+const authBarEl = document.getElementById("auth-bar");
+if(authBarEl){
+  authBarEl.addEventListener("click", (e)=>{
+    const btn = e.target.closest("[data-authact]");
+    if(!btn || btn.type === "submit") return;
+    const act = btn.dataset.authact;
+    if(act==="signup") doAuth("signup");
+    else if(act==="signout") supabaseClient.auth.signOut();
+    else if(act==="forgot"){ authMode = "forgot"; renderAuthBar(); }
+    else if(act==="backtosignin"){ authMode = "signin"; renderAuthBar(); }
+  });
+  authBarEl.addEventListener("submit", (e)=>{
+    e.preventDefault();
+    const submitter = e.submitter || e.target.querySelector('[type="submit"]');
+    const act = submitter ? submitter.dataset.authact : null;
+    if(act==="signin") doAuth("signin");
+    else if(act==="sendreset") doSendReset();
+    else if(act==="dopasswordupdate") doPasswordUpdate();
+  });
+}
+
+/* ---------- storage (로그인 시 Supabase DB, 그 외에는 Claude 아티팩트 저장소 또는 localStorage) ---------- */
 const HAS_CLAUDE_STORAGE = (typeof window.storage !== "undefined" && window.storage && typeof window.storage.get === "function");
 async function loadState(trackId){
   const key = TRACKS[trackId].key;
+  if(supabaseClient && currentUser){
+    try{
+      const { data, error } = await supabaseClient
+        .from("reading_progress")
+        .select("ids")
+        .eq("user_id", currentUser.id)
+        .eq("track", trackId)
+        .maybeSingle();
+      if(error) throw error;
+      STATE[trackId] = (data && data.ids) ? data.ids : [];
+      return;
+    }catch(e){ console.error("supabase load failed, falling back to local", e); }
+  }
   try{
     if(HAS_CLAUDE_STORAGE){
       const res = await window.storage.get(key, false);
@@ -1176,6 +1639,15 @@ async function loadState(trackId){
 }
 async function saveState(trackId){
   const key = TRACKS[trackId].key;
+  if(supabaseClient && currentUser){
+    try{
+      const { error } = await supabaseClient
+        .from("reading_progress")
+        .upsert({ user_id: currentUser.id, track: trackId, ids: STATE[trackId], updated_at: new Date().toISOString() }, { onConflict: "user_id,track" });
+      if(error) throw error;
+      return;
+    }catch(e){ console.error("supabase save failed, falling back to local", e); }
+  }
   try{
     if(HAS_CLAUDE_STORAGE){
       await window.storage.set(key, JSON.stringify(STATE[trackId]), false);
@@ -1202,12 +1674,210 @@ function totalsFor(trackId, groups){
   return {total,done};
 }
 function pct(done,total){ return total? Math.round(done/total*100) : 0; }
+
+function gaugeHtml(p, opts){
+  opts = opts || {};
+  const size = opts.size || 68;
+  const stroke = opts.stroke || 7;
+  const r = (size - stroke) / 2;
+  const c = 2 * Math.PI * r;
+  const clamped = Math.max(0, Math.min(100, p));
+  const offset = c * (1 - clamped/100);
+  const trackColor = opts.trackColor || "#E4E1EC";
+  const fillColor = opts.complete ? (opts.completeColor || opts.fillColor) : opts.fillColor;
+  const cx = size/2, cy = size/2;
+  return `
+  <div class="gauge" style="width:${size}px;height:${size}px;">
+    <svg viewBox="0 0 ${size} ${size}" width="${size}" height="${size}">
+      <circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="${trackColor}" stroke-width="${stroke}"/>
+      <circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="${fillColor}" stroke-width="${stroke}"
+        stroke-linecap="round" stroke-dasharray="${c.toFixed(2)}" stroke-dashoffset="${offset.toFixed(2)}"
+        transform="rotate(-90 ${cx} ${cy})" style="transition:stroke-dashoffset .35s ease;"/>
+    </svg>
+    <div class="gauge-label" style="${opts.labelSize?`font-size:${opts.labelSize}px;`:''}">${opts.complete ? "✓" : clamped+"%"}</div>
+  </div>`;
+}
+
+/* ---------- 추구 진도 설정 (기기별 로컬 저장) ---------- */
+const SETTINGS_KEY = "progress:settings";
+let SETTINGS = { biblePace: 1, lsCount: 1, lsWeeklyGoal: 0 };
+try{
+  const raw = localStorage.getItem(SETTINGS_KEY);
+  if(raw) SETTINGS = Object.assign(SETTINGS, JSON.parse(raw));
+}catch(e){}
+function saveSettings(){
+  try{ localStorage.setItem(SETTINGS_KEY, JSON.stringify(SETTINGS)); }catch(e){}
+}
+let SETTINGS_OPEN = null; // "bible" | "ls" | null
+
+function addDays(dateStr, n){
+  const [m,d] = dateStr.split("/").map(Number);
+  const dt = new Date(new Date().getFullYear(), m-1, d);
+  dt.setDate(dt.getDate()+n);
+  return `${dt.getMonth()+1}/${dt.getDate()}`;
+}
+
+function todayCardHtml(){
+  const now = new Date();
+  const todayStr = `${now.getMonth()+1}/${now.getDate()}`;
+  const set = readSet("bible");
+  const dayOffsets = SETTINGS.biblePace >= 2 ? [0,1] : [0];
+  let items = [];
+  dayOffsets.forEach(off=>{
+    const d = off===0 ? todayStr : addDays(todayStr, off);
+    const dayItems = [...OT_ITEMS.filter(it=>it.date===d), ...NT_ITEMS.filter(it=>it.date===d)];
+    dayItems.forEach(it=>items.push({...it, dayTag: off===0 ? "오늘" : "내일 몫"}));
+  });
+  const rows = items.map(e=>{
+    const isRead = set.has(e.id);
+    return `<div class="entry-row entry-toggle ${isRead?'read':''}" data-track="bible" data-id="${e.id}">
+      <span class="entry-check">${isRead?'✓':''}</span>
+      <span class="entry-date">${e.date}</span>
+      <span class="entry-text">${e.text}</span>
+    </div>`;
+  }).join("");
+  const paceNote = SETTINGS.biblePace >= 2 ? `<span class="today-pace-tag">1년 2독 페이스</span>` : "";
+  return `<div class="today-card">
+    <div class="today-label-row">
+      <div class="today-label">오늘의 추구 · ${todayStr} ${paceNote}</div>
+      <button class="settings-gear" data-settings="bible">⚙</button>
+    </div>
+    ${settingsPopoverHtml("bible")}
+    ${rows || `<div class="entry-text" style="padding:4px 2px;">오늘 날짜에 해당하는 본문이 없어요.</div>`}
+  </div>`;
+}
+
+function nextLsInBooks(bookGroups, set, skipIds){
+  for(const g of bookGroups){
+    for(const e of g.entries){
+      if(!set.has(e.id) && !skipIds.has(e.id)) return { book:g.name, entry:e };
+    }
+  }
+  return null;
+}
+function lsDailyCount(){
+  if(SETTINGS.lsWeeklyGoal && SETTINGS.lsWeeklyGoal > 0){
+    return Math.max(1, Math.round(SETTINGS.lsWeeklyGoal/7));
+  }
+  return Math.max(1, SETTINGS.lsCount || 1);
+}
+function todayLsCardHtml(){
+  const set = readSet("ls");
+  const otAll = LS_BY_BOOK.ot.flatMap(g=>g.entries);
+  const ntAll = LS_BY_BOOK.nt.flatMap(g=>g.entries);
+  const otPct = pct(otAll.filter(e=>set.has(e.id)).length, otAll.length);
+  const ntPct = pct(ntAll.filter(e=>set.has(e.id)).length, ntAll.length);
+
+  const count = lsDailyCount();
+  const skip = new Set();
+  const order = otPct <= ntPct ? ["ot","nt"] : ["nt","ot"];
+  const results = [];
+  let guard = 0;
+  while(results.length < count && guard < count*6+10){
+    guard++;
+    const which = order[results.length % 2];
+    const groups = which==="ot" ? LS_BY_BOOK.ot : LS_BY_BOOK.nt;
+    const item = nextLsInBooks(groups, set, skip);
+    if(item){ skip.add(item.entry.id); results.push({...item, tag: which==="ot"?"구약":"신약"}); }
+    else if(order.every(w=>{
+      const g2 = w==="ot" ? LS_BY_BOOK.ot : LS_BY_BOOK.nt;
+      return !nextLsInBooks(g2, set, skip);
+    })) break;
+  }
+
+  const gear = `<button class="settings-gear" data-settings="ls">⚙</button>`;
+  if(results.length===0){
+    return `<div class="today-card ls">
+      <div class="today-label-row"><div class="today-label">오늘의 추구</div>${gear}</div>
+      ${settingsPopoverHtml("ls")}
+      <div class="entry-text" style="padding:6px 2px;">라이프스터디를 완독했어요 🎉</div>
+    </div>`;
+  }
+  const rows = results.map(item => `
+    <div class="entry-row entry-toggle" data-track="ls" data-book="${item.book}" data-idx="0" data-id="${item.entry.id}">
+      <span class="entry-check"></span>
+      <span class="entry-date">${item.tag}</span>
+      <span class="entry-text">${item.book} ${item.entry.label}단계</span>
+    </div>`).join("");
+  const goalNote = SETTINGS.lsWeeklyGoal>0 ? `<span class="today-pace-tag">주간 ${SETTINGS.lsWeeklyGoal}단계 목표</span>` : (count>1 ? `<span class="today-pace-tag">하루 ${count}개</span>` : "");
+  return `<div class="today-card ls">
+    <div class="today-label-row"><div class="today-label">오늘의 추구 · 최근 읽은 다음 순서 ${goalNote}</div>${gear}</div>
+    ${settingsPopoverHtml("ls")}
+    ${rows}
+  </div>`;
+}
+
+function settingsPopoverHtml(kind){
+  if(SETTINGS_OPEN !== kind) return "";
+  if(kind==="bible"){
+    return `<div class="settings-pop">
+      <div class="settings-pop-title">읽기 페이스</div>
+      <label><input type="radio" name="bible-pace" value="1" ${SETTINGS.biblePace===1?"checked":""}> 1년 1독 (기본)</label>
+      <label><input type="radio" name="bible-pace" value="2" ${SETTINGS.biblePace===2?"checked":""}> 1년 2독 (오늘+내일 몫을 같이 보여줘요)</label>
+      <div class="settings-pop-note">기기에만 저장돼요.</div>
+    </div>`;
+  }
+  return `<div class="settings-pop">
+    <div class="settings-pop-title">오늘의 추구 개수</div>
+    <label>기본 표시 개수 <input type="number" min="1" max="10" id="ls-count-input" value="${SETTINGS.lsCount||1}" style="width:52px;"></label>
+    <div class="settings-pop-title" style="margin-top:10px;">이번 주 목표치 (선택)</div>
+    <label>주간 목표 단계 수 <input type="number" min="0" max="100" id="ls-weekly-input" value="${SETTINGS.lsWeeklyGoal||0}" style="width:52px;"></label>
+    <div class="settings-pop-note">주간 목표를 넣으면 개수 대신 그 기준으로 하루치가 계산돼요 (0이면 끔). 기기에만 저장돼요.</div>
+    <button data-settings-save="ls" style="margin-top:8px;">저장</button>
+  </div>`;
+}
+
 function currentGroups(trackId){
   if(trackId==="bible") return VIEWMODE.bible==="month" ? BIBLE_BY_MONTH : BIBLE_BY_BOOK;
   return TRACKS[trackId];
 }
 
 /* ---------- render ---------- */
+function renderMonthRows(){
+  const readSetObj = readSet("bible");
+  function col(group, label){
+    const entries = group.entries.slice().sort((a,b)=>(readSetObj.has(a.id)?1:0)-(readSetObj.has(b.id)?1:0));
+    const list = entries.map(e=>{
+      const isRead = readSetObj.has(e.id);
+      return `<div class="entry-row entry-toggle ${isRead?'read':''}" data-track="bible" data-id="${e.id}">
+        <span class="entry-check">${isRead?'✓':''}</span>
+        <span class="entry-date">${e.date}</span>
+        <span class="entry-text">${e.text}</span>
+      </div>`;
+    }).join("");
+    return `<div class="month-col">
+      <div class="month-col-label">${label}</div>
+      <div class="entry-list">${list}</div>
+      <div class="book-tools">
+        <button data-act="all" data-track="bible" data-book="${group.name}">전체 읽음</button>
+        <button data-act="reset" data-track="bible" data-book="${group.name}">초기화</button>
+      </div>
+    </div>`;
+  }
+  return MONTH_ORDER.map((m,i)=>{
+    const otGroup = BIBLE_BY_MONTH.ot[i], ntGroup = BIBLE_BY_MONTH.nt[i];
+    const otDone = countRead("bible", otGroup.entries), ntDone = countRead("bible", ntGroup.entries);
+    const otN = otGroup.entries.length, ntN = ntGroup.entries.length;
+    const isComplete = otN>0 && otDone===otN && ntN>0 && ntDone===ntN;
+    const isOpen = OPEN.bible.has(m);
+    return `
+    <div class="book month-row ${isOpen?'open':''} ${isComplete?'complete':''}" data-book="${m}">
+      <div class="book-head" data-track="bible" data-book="${m}">
+        <span class="book-testament-tag"></span>
+        <span class="book-name">${m}</span>
+        <span class="book-count month-count">${isComplete ? '<span class="badge-done">완독</span>' : `구약 ${otDone}/${otN} · 신약 ${ntDone}/${ntN}`}</span>
+        <span class="chevron">▸</span>
+      </div>
+      <div class="chapters">
+        <div class="month-columns">
+          ${col(otGroup,"구약")}
+          ${col(ntGroup,"신약")}
+        </div>
+      </div>
+    </div>`;
+  }).join("");
+}
+
 function render(trackId){
   const t = TRACKS[trackId];
   const groups = currentGroups(trackId);
@@ -1220,18 +1890,22 @@ function render(trackId){
   const readSetObj = readSet(trackId);
   const bookViewOnly = trackId==="bible" && VIEWMODE.bible==="book";
 
-  const rows = filtered.map(g=>{
+  let prevTest = null;
+  const monthCombined = trackId==="bible" && VIEWMODE.bible==="month";
+  const rows = monthCombined ? renderMonthRows() : filtered.map(g=>{
     const name = g.name, test = g.test, entriesRaw = g.entries;
     const done = countRead(trackId, entriesRaw);
     const n = entriesRaw.length;
     const p = pct(done,n);
     const isComplete = n>0 && done===n;
+    const isDividerStart = prevTest==="ot" && test==="nt";
+    prevTest = test;
 
     if(bookViewOnly){
       return `
-      <div class="book static" data-book="${name}">
+      <div class="book static ${isComplete?'complete':''} ${isDividerStart?'divider-start':''}" data-book="${name}">
         <div class="book-head book-head-static">
-          <span class="book-testament-tag ${test}"></span>
+          <span class="book-testament-tag"></span>
           <span class="book-name">${name}</span>
           <span class="book-bar-track"><span class="book-bar-fill" style="width:${p}%"></span></span>
           <span class="book-count">${isComplete ? '<span class="badge-done">완독</span>' : `${done}/${n} · ${p}%`}</span>
@@ -1247,8 +1921,8 @@ function render(trackId){
 
     let inner;
     if(t.mode === "chapters"){
-      inner = `<div class="chapter-grid">` + entries.map(e=>
-        `<button class="ch-btn entry-toggle ${readSetObj.has(e.id)?'read':''}" data-track="${trackId}" data-id="${e.id}">${e.label}</button>`
+      inner = `<div class="chapter-grid">` + entries.map((e,i)=>
+        `<button class="ch-btn entry-toggle ${readSetObj.has(e.id)?'read':''}" data-track="${trackId}" data-book="${name}" data-idx="${i}" data-id="${e.id}">${e.label}</button>`
       ).join("") + `</div>`;
     }else{
       inner = `<div class="entry-list">` + entries.map(e=>{
@@ -1262,9 +1936,9 @@ function render(trackId){
     }
 
     return `
-    <div class="book ${isOpen?'open':''}" data-book="${name}">
+    <div class="book ${isOpen?'open':''} ${isComplete?'complete':''} ${isDividerStart?'divider-start':''}" data-book="${name}">
       <div class="book-head" data-track="${trackId}" data-book="${name}">
-        <span class="book-testament-tag ${test}"></span>
+        <span class="book-testament-tag"></span>
         <span class="book-name">${name}</span>
         <span class="book-bar-track"><span class="book-bar-fill" style="width:${p}%"></span></span>
         <span class="book-count">${isComplete ? '<span class="badge-done">완독</span>' : `${done}/${n} · ${p}%`}</span>
@@ -1285,27 +1959,33 @@ function render(trackId){
   const viewToggleHtml = trackId==="bible" ? `
     <div class="toolbar view-toolbar">
       <div class="chips">
-        <span class="chip ${VIEWMODE.bible==='month'?'active':''}" data-track="bible" data-viewmode="month">월별</span>
-        <span class="chip ${VIEWMODE.bible==='book'?'active':''}" data-track="bible" data-viewmode="book">권별</span>
+        <span class="chip ${VIEWMODE.bible==='month'?'active':''}" data-track="bible" data-viewmode="month">체크</span>
+        <span class="chip ${VIEWMODE.bible==='book'?'active':''}" data-track="bible" data-viewmode="book">권별 추구 현황</span>
       </div>
     </div>` : "";
 
+  const gTrack = trackId==="bible" ? "#B9D0F5" : "#B3DEC3";
+  const gFill = trackId==="bible" ? "#1849B5" : "#1B7A48";
+
   const html = `
+    ${trackId==="bible" ? todayCardHtml() : todayLsCardHtml()}
     <div class="ledger">
-      <div class="ledger-row">
-        <span class="ledger-label">전체</span>
-        <span class="ledger-bar-track"><span class="ledger-bar-fill" style="width:${pct(allTot.done,allTot.total)}%"></span></span>
-        <span class="ledger-pct">${allTot.total && allTot.done===allTot.total ? '<span class="badge-done">완독</span>' : `<b>${pct(allTot.done,allTot.total)}%</b> · ${allTot.done}/${allTot.total}`}</span>
-      </div>
-      <div class="ledger-row">
-        <span class="ledger-label">구약</span>
-        <span class="ledger-bar-track"><span class="ledger-bar-fill" style="width:${pct(otTot.done,otTot.total)}%"></span></span>
-        <span class="ledger-pct">${otTot.total && otTot.done===otTot.total ? '<span class="badge-done">완독</span>' : `<b>${pct(otTot.done,otTot.total)}%</b> · ${otTot.done}/${otTot.total}`}</span>
-      </div>
-      <div class="ledger-row">
-        <span class="ledger-label">신약</span>
-        <span class="ledger-bar-track"><span class="ledger-bar-fill" style="width:${pct(ntTot.done,ntTot.total)}%"></span></span>
-        <span class="ledger-pct">${ntTot.total && ntTot.done===ntTot.total ? '<span class="badge-done">완독</span>' : `<b>${pct(ntTot.done,ntTot.total)}%</b> · ${ntTot.done}/${ntTot.total}`}</span>
+      <div class="gauge-thirds">
+        <div class="gauge-item">
+          ${gaugeHtml(pct(allTot.done,allTot.total), {size:72, stroke:7, trackColor:gTrack, fillColor:gFill, complete: allTot.total && allTot.done===allTot.total, labelSize:14})}
+          <div class="gauge-item-label">전체</div>
+          <div class="gauge-item-count">${allTot.done}/${allTot.total}</div>
+        </div>
+        <div class="gauge-item">
+          ${gaugeHtml(pct(otTot.done,otTot.total), {size:56, stroke:6, trackColor:gTrack, fillColor:gFill, complete: otTot.total && otTot.done===otTot.total})}
+          <div class="gauge-item-label">구약</div>
+          <div class="gauge-item-count">${otTot.done}/${otTot.total}</div>
+        </div>
+        <div class="gauge-item">
+          ${gaugeHtml(pct(ntTot.done,ntTot.total), {size:56, stroke:6, trackColor:gTrack, fillColor:gFill, complete: ntTot.total && ntTot.done===ntTot.total})}
+          <div class="gauge-item-label">신약</div>
+          <div class="gauge-item-count">${ntTot.done}/${ntTot.total}</div>
+        </div>
       </div>
     </div>
 
@@ -1313,9 +1993,11 @@ function render(trackId){
 
     <div class="toolbar">
       <div class="chips">
+        ${monthCombined ? "" : `
         <span class="chip ${FILTER[trackId]==='all'?'active':''}" data-track="${trackId}" data-filter="all">전체</span>
         <span class="chip ${FILTER[trackId]==='ot'?'active':''}" data-track="${trackId}" data-filter="ot">구약</span>
         <span class="chip ${FILTER[trackId]==='nt'?'active':''}" data-track="${trackId}" data-filter="nt">신약</span>
+        `}
       </div>
       <div class="toolbar-actions">
         ${bookViewOnly ? "" : `
@@ -1329,21 +2011,87 @@ function render(trackId){
     ${noteHtml}
   `;
   document.getElementById(trackId==="bible"?"panel-bible":"panel-ls").innerHTML = html;
+  renderHomePanel();
+}
+
+function renderHomePanel(){
+  const el = document.getElementById("panel-home");
+  if(!el) return;
+  el.innerHTML = `
+    <div class="home-section">
+      <div class="home-section-label" style="color:${ACCENT.bible};">${ICONS.bible} 성경 1년 1독</div>
+      ${todayCardHtml()}
+    </div>
+    <div class="home-section">
+      <div class="home-section-label" style="color:${ACCENT.ls};">${ICONS.ls} 라이프스터디</div>
+      ${todayLsCardHtml()}
+    </div>
+  `;
 }
 
 /* ---------- events ---------- */
-const ACCENT = { bible:"#1849B5", ls:"#1B7A48" };
+const ACCENT = { home:"#0E9488", bible:"#1849B5", ls:"#1B7A48", group:"#7A4FC2" };
+const HEADER_TITLE = { home:"홈", bible:"성경 1년 1독", ls:"라이프스터디", group:"함께 읽기" };
+const ICONS = {
+  home: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3.5 11 12 4l8.5 7"/><path d="M5.5 9.5V20h13V9.5"/></svg>`,
+  bible: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 5.2c2.3-1.1 5.2-1.1 7 0v14.1c-1.8-1.1-4.7-1.1-7 0V5.2Z"/><path d="M20 5.2c-2.3-1.1-5.2-1.1-7 0v14.1c1.8-1.1 4.7-1.1 7 0V5.2Z"/></svg>`,
+  ls: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 3.2 3 8l9 4.8 9-4.8-9-4.8Z"/><path d="M3 13l9 4.8 9-4.8"/><path d="M3 17.4l9 4.8 9-4.8"/></svg>`,
+  group: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="9" cy="8.2" r="3.1"/><path d="M3.2 20c0-3.3 2.6-5.9 5.8-5.9s5.8 2.6 5.8 5.9"/><circle cx="17" cy="9.4" r="2.5"/><path d="M14.4 14.5c2.5.4 4.6 2.5 4.6 5.5"/></svg>`
+};
 
 document.addEventListener("click", async (e)=>{
+  const accountBtn = e.target.closest("#account-btn");
+  if(accountBtn){
+    document.getElementById("auth-panel").classList.toggle("open");
+    return;
+  }
+
   const tabBtn = e.target.closest(".tabbtn");
   if(tabBtn){
     document.querySelectorAll(".tabbtn").forEach(b=>b.classList.remove("active"));
     document.querySelectorAll(".panel").forEach(p=>p.classList.remove("active"));
     tabBtn.classList.add("active");
     const id = tabBtn.dataset.tab;
-    document.getElementById(id==="bible"?"panel-bible":"panel-ls").classList.add("active");
-    document.querySelector("header.title-block").style.borderBottomColor = ACCENT[id];
-    document.body.style.background = id==="bible" ? "#FCFBFF" : "#FAFDFB";
+    document.getElementById(`panel-${id}`).classList.add("active");
+    const navEl = document.querySelector(".bottom-nav");
+    if(navEl) navEl.style.borderTopColor = ACCENT[id];
+    const themeMeta = document.querySelector('meta[name="theme-color"]');
+    if(themeMeta) themeMeta.setAttribute("content", ACCENT[id]);
+    const headerTitle = document.getElementById("header-title");
+    if(headerTitle) headerTitle.textContent = HEADER_TITLE[id];
+    const headerIcon = document.getElementById("header-icon");
+    if(headerIcon) headerIcon.innerHTML = ICONS[id] || "";
+    // 탭별로 배경색을 바꾸지 않고 전체를 한 톤으로 유지
+    if(id==="group") renderGroupPanel();
+    if(id==="home") renderHomePanel();
+    return;
+  }
+
+  const paceRadio = e.target.closest('input[name="bible-pace"]');
+  if(paceRadio){
+    SETTINGS.biblePace = parseInt(paceRadio.value, 10);
+    saveSettings();
+    render("bible");
+    return;
+  }
+
+  const gearBtn = e.target.closest(".settings-gear");
+  if(gearBtn){
+    const kind = gearBtn.dataset.settings;
+    SETTINGS_OPEN = (SETTINGS_OPEN === kind) ? null : kind;
+    render(kind);
+    return;
+  }
+
+  const saveLsBtn = e.target.closest("[data-settings-save='ls']");
+  if(saveLsBtn){
+    const countEl = document.getElementById("ls-count-input");
+    const weeklyEl = document.getElementById("ls-weekly-input");
+    SETTINGS.lsCount = countEl ? Math.max(1, parseInt(countEl.value,10) || 1) : SETTINGS.lsCount;
+    SETTINGS.lsWeeklyGoal = weeklyEl ? Math.max(0, parseInt(weeklyEl.value,10) || 0) : SETTINGS.lsWeeklyGoal;
+    saveSettings();
+    SETTINGS_OPEN = null;
+    render("ls");
     return;
   }
 
@@ -1365,8 +2113,8 @@ document.addEventListener("click", async (e)=>{
   const bulk = e.target.closest("[data-act='expand-all'],[data-act='collapse-all']");
   if(bulk){
     const trackId = bulk.dataset.track;
-    const groups = currentGroups(trackId);
-    const names = [...groups.ot, ...groups.nt].map(b=>b.name);
+    const monthCombined = trackId==="bible" && VIEWMODE.bible==="month";
+    const names = monthCombined ? MONTH_ORDER.slice() : [...currentGroups(trackId).ot, ...currentGroups(trackId).nt].map(b=>b.name);
     if(bulk.dataset.act==="expand-all") names.forEach(n=>OPEN[trackId].add(n));
     else OPEN[trackId].clear();
     render(trackId);
@@ -1400,34 +2148,78 @@ document.addEventListener("click", async (e)=>{
 });
 
 /* ---------- drag-select checking ---------- */
-let DRAG = { active:false, trackId:null, mode:null, touched:new Set() };
+// "days" 모드(1년1독 날짜 목록): 지나간 항목을 하나씩 페인트하듯 토글
+// "chapters" 모드(라이프스터디 번호 그리드): 시작 번호 ~ 현재 위치까지 범위 선택
+//   (옆으로 드래그하면 이동한 칸 수만큼, 아래로 드래그하면 그 줄까지 전체가 선택됨)
+let DRAG = { active:false, kind:null, trackId:null, mode:null, touched:new Set(), book:null, startIdx:0, curIdx:0, original:null };
+let longPressTimer = null, longPressFired = false, touchStartPos = null, touchPendingEl = null;
 
 function applyVisual(el, checked){
   el.classList.toggle("read", checked);
   const checkSpan = el.querySelector && el.querySelector(".entry-check");
   if(checkSpan) checkSpan.textContent = checked ? "✓" : "";
 }
+
+function groupButtons(trackId, book){
+  return Array.from(document.querySelectorAll(`.ch-btn[data-track="${CSS.escape(trackId)}"][data-book="${CSS.escape(book)}"]`));
+}
+function applyRange(){
+  const lo = Math.min(DRAG.startIdx, DRAG.curIdx), hi = Math.max(DRAG.startIdx, DRAG.curIdx);
+  groupButtons(DRAG.trackId, DRAG.book).forEach(btn=>{
+    const idx = parseInt(btn.dataset.idx, 10);
+    const inRange = idx >= lo && idx <= hi;
+    const checked = inRange ? (DRAG.mode==="check") : DRAG.original.get(idx);
+    btn.classList.toggle("read", checked);
+  });
+}
+
 function startDrag(el){
   const trackId = el.dataset.track;
-  const wasChecked = el.classList.contains("read");
-  DRAG = { active:true, trackId, mode: wasChecked ? "uncheck" : "check", touched:new Set() };
-  applyVisual(el, DRAG.mode==="check");
-  DRAG.touched.add(el.dataset.id);
+  if(el.classList.contains("ch-btn")){
+    const book = el.dataset.book;
+    const idx = parseInt(el.dataset.idx, 10);
+    const wasChecked = el.classList.contains("read");
+    const original = new Map();
+    groupButtons(trackId, book).forEach(btn=> original.set(parseInt(btn.dataset.idx,10), btn.classList.contains("read")));
+    DRAG = { active:true, kind:"chapters", trackId, book, mode: wasChecked ? "uncheck" : "check", startIdx:idx, curIdx:idx, original, touched:new Set() };
+    applyRange();
+  }else{
+    const wasChecked = el.classList.contains("read");
+    DRAG = { active:true, kind:"days", trackId, mode: wasChecked ? "uncheck" : "check", touched:new Set(), book:null, startIdx:0, curIdx:0, original:null };
+    applyVisual(el, DRAG.mode==="check");
+    DRAG.touched.add(el.dataset.id);
+  }
 }
 function dragOver(el){
   if(!DRAG.active || !el || el.dataset.track !== DRAG.trackId) return;
-  const id = el.dataset.id;
-  if(DRAG.touched.has(id)) return;
-  applyVisual(el, DRAG.mode==="check");
-  DRAG.touched.add(id);
+  if(DRAG.kind === "chapters"){
+    if(!el.classList.contains("ch-btn") || el.dataset.book !== DRAG.book) return;
+    DRAG.curIdx = parseInt(el.dataset.idx, 10);
+    applyRange();
+  }else{
+    const id = el.dataset.id;
+    if(DRAG.touched.has(id)) return;
+    applyVisual(el, DRAG.mode==="check");
+    DRAG.touched.add(id);
+  }
 }
 async function endDrag(){
   if(!DRAG.active) return;
-  const trackId = DRAG.trackId, mode = DRAG.mode, touched = DRAG.touched;
-  DRAG = { active:false, trackId:null, mode:null, touched:new Set() };
-  if(touched.size===0) return;
+  const trackId = DRAG.trackId, mode = DRAG.mode;
+  let idsToApply = [];
+  if(DRAG.kind === "chapters"){
+    const lo = Math.min(DRAG.startIdx, DRAG.curIdx), hi = Math.max(DRAG.startIdx, DRAG.curIdx);
+    groupButtons(trackId, DRAG.book).forEach(btn=>{
+      const idx = parseInt(btn.dataset.idx, 10);
+      if(idx >= lo && idx <= hi) idsToApply.push(btn.dataset.id);
+    });
+  }else{
+    idsToApply = [...DRAG.touched];
+  }
+  DRAG = { active:false, kind:null, trackId:null, mode:null, touched:new Set(), book:null, startIdx:0, curIdx:0, original:null };
+  if(idsToApply.length===0) return;
   const set = readSet(trackId);
-  touched.forEach(id => mode==="check" ? set.add(id) : set.delete(id));
+  idsToApply.forEach(id => mode==="check" ? set.add(id) : set.delete(id));
   STATE[trackId] = [...set];
   await saveState(trackId);
   render(trackId);
@@ -1449,23 +2241,381 @@ document.addEventListener("mouseup", ()=>{ if(DRAG.active) endDrag(); });
 document.addEventListener("touchstart", (e)=>{
   const el = e.target.closest(".entry-toggle");
   if(!el) return;
-  startDrag(el);
+  const t = e.touches[0];
+  touchPendingEl = el;
+  touchStartPos = { x:t.clientX, y:t.clientY };
+  longPressFired = false;
+  clearTimeout(longPressTimer);
+  longPressTimer = setTimeout(()=>{
+    longPressFired = true;
+    startDrag(el);
+  }, 220);
 }, { passive:true });
 document.addEventListener("touchmove", (e)=>{
-  if(!DRAG.active) return;
+  if(!longPressFired){
+    if(touchStartPos){
+      const t = e.touches[0];
+      if(Math.abs(t.clientX-touchStartPos.x) > 10 || Math.abs(t.clientY-touchStartPos.y) > 10){
+        clearTimeout(longPressTimer);
+        touchPendingEl = null;
+      }
+    }
+    return; // 롱프레스 전에는 그대로 스크롤되게 둠
+  }
+  e.preventDefault(); // 롱프레스로 드래그 선택 중일 때만 스크롤 막기
   const touch = e.touches[0];
   const under = document.elementFromPoint(touch.clientX, touch.clientY);
   const el = under && under.closest(".entry-toggle");
   if(el) dragOver(el);
+}, { passive:false });
+document.addEventListener("touchend", ()=>{
+  clearTimeout(longPressTimer);
+  if(longPressFired){
+    endDrag();
+  }else if(touchPendingEl){
+    startDrag(touchPendingEl); // 짧게 탭한 경우: 그 항목 하나만 토글
+    endDrag();
+  }
+  touchPendingEl = null;
+  touchStartPos = null;
+  longPressFired = false;
 });
-document.addEventListener("touchend", ()=>{ if(DRAG.active) endDrag(); });
+
+/* ---------- 함께 읽기 (그룹) ---------- */
+const MODE_LABEL = { shared:"공유 진도", individual:"개별 진도", social_only:"공유만" };
+const MODE_DESC = {
+  shared: "그룹 전체가 하나의 진도를 함께 체크해요 (다같이 한 책 읽는 느낌)",
+  individual: "각자 자기 진도로 읽고, 서로의 진행률만 볼 수 있어요",
+  social_only: "진도는 공유하지 않고, 멤버 목록만 함께 봐요"
+};
+
+function computeIdTotals(idsArray, items){
+  const set = new Set(idsArray||[]);
+  let total=0, done=0;
+  items.forEach(it=>{ total++; if(set.has(it.id)) done++; });
+  return { done, total };
+}
+function bibleTotalsFromIds(ids){
+  const ot = computeIdTotals(ids, OT_ITEMS), nt = computeIdTotals(ids, NT_ITEMS);
+  return { ot, nt, all:{ done: ot.done+nt.done, total: ot.total+nt.total } };
+}
+function lsTotalsFromIds(ids){
+  const all = [...LS_BY_BOOK.ot, ...LS_BY_BOOK.nt].flatMap(g=>g.entries);
+  return computeIdTotals(ids, all);
+}
+
+async function renderGroupPanel(){
+  const el = document.getElementById("panel-group");
+  if(!el) return;
+
+  if(!supabaseClient){
+    el.innerHTML = `<div class="note">함께 읽기는 계정 연결(Supabase)이 필요해요. 코드 상단의 SUPABASE_URL / SUPABASE_ANON_KEY를 먼저 채워주세요.</div>`;
+    return;
+  }
+  if(!currentUser){
+    el.innerHTML = `<div class="note">함께 읽기는 로그인 후에 쓸 수 있어요. 상단에서 먼저 로그인하거나 회원가입해주세요.</div>`;
+    return;
+  }
+
+  el.innerHTML = `<div class="panel-inner">불러오는 중...</div>`;
+
+  const createForm = `
+    <div class="group-section">
+      <h3>새 그룹 만들기</h3>
+      <div class="group-row">
+        <input type="text" id="group-name" placeholder="그룹 이름 (예: 우리 구역)">
+      </div>
+      <div class="mode-options">
+        <label><input type="radio" name="group-mode" value="shared"><span><b>${MODE_LABEL.shared}</b> — ${MODE_DESC.shared}</span></label>
+        <label><input type="radio" name="group-mode" value="individual" checked><span><b>${MODE_LABEL.individual}</b> — ${MODE_DESC.individual}</span></label>
+        <label><input type="radio" name="group-mode" value="social_only"><span><b>${MODE_LABEL.social_only}</b> — ${MODE_DESC.social_only}</span></label>
+      </div>
+      <div class="group-row">
+        <input type="text" id="group-nickname-create" placeholder="그룹에서 쓸 닉네임" value="${(currentUser.email||"").split("@")[0]}">
+        <button data-gact="create">그룹 만들기</button>
+      </div>
+      <div class="auth-msg" id="group-msg-create"></div>
+    </div>
+
+    <div class="group-section">
+      <h3>초대 코드로 참여하기</h3>
+      <div class="group-row">
+        <input type="text" id="join-code" placeholder="초대 코드 8자리">
+        <input type="text" id="group-nickname-join" placeholder="그룹에서 쓸 닉네임" value="${(currentUser.email||"").split("@")[0]}">
+        <button data-gact="join">참여하기</button>
+      </div>
+      <div class="auth-msg" id="group-msg-join"></div>
+    </div>
+  `;
+
+  let myRows = [];
+  try{
+    const { data, error } = await supabaseClient
+      .from("group_members")
+      .select("nickname, groups(id,name,owner_id,progress_mode,invite_code)")
+      .eq("user_id", currentUser.id);
+    if(error) throw error;
+    myRows = data || [];
+  }catch(e){
+    el.innerHTML = `<div class="panel-inner">${createForm}<div class="note">그룹을 불러오지 못했어요: ${e.message||e}</div></div>`;
+    return;
+  }
+
+  if(myRows.length===0){
+    el.innerHTML = `<div class="panel-inner">${createForm}<div class="group-empty">아직 참여한 그룹이 없어요.</div></div>`;
+    return;
+  }
+
+  const cardsHtml = await Promise.all(myRows.map(async (row)=>{
+    const g = row.groups;
+    if(!g) return "";
+    let members = [];
+    try{
+      const { data } = await supabaseClient.from("group_members").select("user_id,nickname,joined_at").eq("group_id", g.id);
+      members = data || [];
+    }catch(e){ members = []; }
+
+    const isOwner = g.owner_id === currentUser.id;
+    let bodyHtml = "";
+
+    if(g.progress_mode === "social_only"){
+      bodyHtml = members.length ? `
+        <div class="member-list">
+          ${members.map(m=>`<div class="member-row"><span>${m.nickname || "이름없음"}${m.user_id===currentUser.id?" (나)":""}</span><span>${new Date(m.joined_at).toLocaleDateString("ko-KR")} 참여</span></div>`).join("")}
+        </div>` : `<div class="group-empty">멤버 정보가 없어요.</div>`;
+
+    }else if(g.progress_mode === "individual"){
+      const memberIds = members.map(m=>m.user_id);
+      let progressRows = [];
+      try{
+        const { data } = await supabaseClient.from("reading_progress").select("user_id,track,ids").in("user_id", memberIds.length?memberIds:["00000000-0000-0000-0000-000000000000"]);
+        progressRows = data || [];
+      }catch(e){ progressRows = []; }
+      const byUser = {};
+      progressRows.forEach(r=>{ byUser[r.user_id] = byUser[r.user_id] || {}; byUser[r.user_id][r.track] = r.ids; });
+      bodyHtml = `<div class="member-list">` + members.map(m=>{
+        const bibleIds = (byUser[m.user_id] && byUser[m.user_id].bible) || [];
+        const lsIds = (byUser[m.user_id] && byUser[m.user_id].ls) || [];
+        const bibleP = pct(bibleTotalsFromIds(bibleIds).all.done, bibleTotalsFromIds(bibleIds).all.total);
+        const lsTot = lsTotalsFromIds(lsIds);
+        const lsP = pct(lsTot.done, lsTot.total);
+        return `<div class="member-row">
+          <span>${m.nickname || "이름없음"}${m.user_id===currentUser.id?" (나)":""}</span>
+          <span class="member-bars">성경 <b>${bibleP}%</b> · 라이프스터디 <b>${lsP}%</b></span>
+        </div>`;
+      }).join("") + `</div>`;
+
+    }else{ // shared
+      let bibleIds = [], lsIds = [];
+      try{
+        const { data } = await supabaseClient.from("group_progress").select("track,ids").eq("group_id", g.id);
+        (data||[]).forEach(r=>{ if(r.track==="bible") bibleIds = r.ids||[]; if(r.track==="ls") lsIds = r.ids||[]; });
+      }catch(e){}
+      const bt = bibleTotalsFromIds(bibleIds);
+      const lsTot = lsTotalsFromIds(lsIds);
+      const now = new Date();
+      const todayStr = `${now.getMonth()+1}/${now.getDate()}`;
+      const todaySet = new Set(bibleIds);
+      const todayItems = [...OT_ITEMS.filter(it=>it.date===todayStr), ...NT_ITEMS.filter(it=>it.date===todayStr)];
+      bodyHtml = `
+        <div class="ledger" style="margin-bottom:14px;">
+          <div class="gauge-thirds">
+            <div class="gauge-item">
+              ${gaugeHtml(pct(bt.all.done,bt.all.total), {size:64, stroke:6, trackColor:"#D9CBF2", fillColor:"#7A4FC2", complete: bt.all.total && bt.all.done===bt.all.total, labelSize:12})}
+              <div class="gauge-item-label">전체</div>
+              <div class="gauge-item-count">${bt.all.done}/${bt.all.total}</div>
+            </div>
+            <div class="gauge-item">
+              ${gaugeHtml(pct(bt.ot.done,bt.ot.total), {size:48, stroke:5, trackColor:"#D9CBF2", fillColor:"#7A4FC2", complete: bt.ot.total && bt.ot.done===bt.ot.total})}
+              <div class="gauge-item-label">구약</div>
+              <div class="gauge-item-count">${bt.ot.done}/${bt.ot.total}</div>
+            </div>
+            <div class="gauge-item">
+              ${gaugeHtml(pct(bt.nt.done,bt.nt.total), {size:48, stroke:5, trackColor:"#D9CBF2", fillColor:"#7A4FC2", complete: bt.nt.total && bt.nt.done===bt.nt.total})}
+              <div class="gauge-item-label">신약</div>
+              <div class="gauge-item-count">${bt.nt.done}/${bt.nt.total}</div>
+            </div>
+          </div>
+        </div>
+        <div style="font-size:11.5px;color:var(--ink-soft);margin-bottom:6px;">라이프스터디 전체 <b>${pct(lsTot.done,lsTot.total)}%</b></div>
+        ${todayItems.length ? `<div class="today-label" style="margin-top:10px;">오늘의 추구 · ${todayStr}</div>` + todayItems.map(it=>`
+          <div class="entry-row group-entry-toggle ${todaySet.has(it.id)?'read':''}" data-group="${g.id}" data-id="${it.id}">
+            <span class="entry-check">${todaySet.has(it.id)?'✓':''}</span>
+            <span class="entry-date">${it.date}</span>
+            <span class="entry-text">${it.text}</span>
+          </div>`).join("") : ""}
+        <div class="member-list" style="margin-top:12px;">
+          ${members.map(m=>`<div class="member-row"><span>${m.nickname || "이름없음"}${m.user_id===currentUser.id?" (나)":""}</span></div>`).join("")}
+        </div>
+      `;
+    }
+
+    return `
+      <div class="group-card">
+        <div class="group-card-head">
+          <h4>${g.name}</h4>
+          <span class="group-mode-badge">${MODE_LABEL[g.progress_mode] || g.progress_mode}</span>
+        </div>
+        <div class="invite-row">
+          초대 코드 <span class="invite-code">${g.invite_code}</span>
+          <button class="secondary" data-gact="copycode" data-code="${g.invite_code}" style="padding:4px 10px;font-size:11.5px;">복사</button>
+        </div>
+        ${bodyHtml}
+        <div class="group-row" style="margin-top:14px;">
+          ${isOwner ? `
+            <select data-gact="modeselect" data-group="${g.id}">
+              <option value="shared" ${g.progress_mode==="shared"?"selected":""}>${MODE_LABEL.shared}</option>
+              <option value="individual" ${g.progress_mode==="individual"?"selected":""}>${MODE_LABEL.individual}</option>
+              <option value="social_only" ${g.progress_mode==="social_only"?"selected":""}>${MODE_LABEL.social_only}</option>
+            </select>
+            <button class="danger" data-gact="delete" data-group="${g.id}">그룹 삭제</button>
+          ` : `
+            <button class="secondary" data-gact="leave" data-group="${g.id}">나가기</button>
+          `}
+        </div>
+      </div>
+    `;
+  }));
+
+  el.innerHTML = `<div class="panel-inner">${createForm}<div class="group-section"><h3>내 그룹</h3>${cardsHtml.join("")}</div></div>`;
+}
+
+async function createGroup(){
+  const nameEl = document.getElementById("group-name");
+  const nickEl = document.getElementById("group-nickname-create");
+  const msg = document.getElementById("group-msg-create");
+  const modeEl = document.querySelector('input[name="group-mode"]:checked');
+  const name = nameEl ? nameEl.value.trim() : "";
+  const nickname = nickEl ? nickEl.value.trim() : "";
+  const mode = modeEl ? modeEl.value : "individual";
+  if(!name){ if(msg){ msg.textContent="그룹 이름을 입력해주세요."; msg.classList.add("error"); } return; }
+  if(msg){ msg.classList.remove("error"); msg.textContent="만드는 중..."; }
+  try{
+    const { data: g, error } = await supabaseClient.from("groups")
+      .insert({ name, owner_id: currentUser.id, progress_mode: mode })
+      .select().single();
+    if(error) throw error;
+    const { error: mErr } = await supabaseClient.from("group_members")
+      .insert({ group_id: g.id, user_id: currentUser.id, nickname: nickname || null });
+    if(mErr) throw mErr;
+    renderGroupPanel();
+  }catch(e){
+    if(msg){ msg.textContent = e.message || "오류가 발생했어요."; msg.classList.add("error"); }
+  }
+}
+
+async function joinGroupByCode(){
+  const codeEl = document.getElementById("join-code");
+  const nickEl = document.getElementById("group-nickname-join");
+  const msg = document.getElementById("group-msg-join");
+  const code = codeEl ? codeEl.value.trim() : "";
+  const nickname = nickEl ? nickEl.value.trim() : "";
+  if(!code){ if(msg){ msg.textContent="초대 코드를 입력해주세요."; msg.classList.add("error"); } return; }
+  if(msg){ msg.classList.remove("error"); msg.textContent="참여하는 중..."; }
+  try{
+    const { data: g, error } = await supabaseClient.from("groups").select("id").eq("invite_code", code).maybeSingle();
+    if(error) throw error;
+    if(!g){ if(msg){ msg.textContent="해당 코드의 그룹을 찾을 수 없어요."; msg.classList.add("error"); } return; }
+    const { error: mErr } = await supabaseClient.from("group_members")
+      .insert({ group_id: g.id, user_id: currentUser.id, nickname: nickname || null });
+    if(mErr) throw mErr;
+    renderGroupPanel();
+  }catch(e){
+    if(msg){ msg.textContent = e.message || "오류가 발생했어요. (이미 참여 중일 수 있어요)"; msg.classList.add("error"); }
+  }
+}
+
+async function leaveGroup(groupId){
+  if(!confirm("이 그룹에서 나갈까요?")) return;
+  try{
+    await supabaseClient.from("group_members").delete().eq("group_id", groupId).eq("user_id", currentUser.id);
+    renderGroupPanel();
+  }catch(e){ alert(e.message || "오류가 발생했어요."); }
+}
+async function deleteGroup(groupId){
+  if(!confirm("그룹을 삭제할까요? 모든 멤버와 진도 기록이 함께 삭제돼요.")) return;
+  try{
+    await supabaseClient.from("groups").delete().eq("id", groupId);
+    renderGroupPanel();
+  }catch(e){ alert(e.message || "오류가 발생했어요."); }
+}
+async function changeGroupMode(groupId, mode){
+  try{
+    await supabaseClient.from("groups").update({ progress_mode: mode }).eq("id", groupId);
+    renderGroupPanel();
+  }catch(e){ alert(e.message || "오류가 발생했어요."); }
+}
+async function toggleGroupToday(groupId, id){
+  try{
+    const { data } = await supabaseClient.from("group_progress").select("ids").eq("group_id", groupId).eq("track","bible").maybeSingle();
+    const set = new Set((data && data.ids) || []);
+    if(set.has(id)) set.delete(id); else set.add(id);
+    await supabaseClient.from("group_progress").upsert(
+      { group_id: groupId, track:"bible", ids:[...set], updated_at:new Date().toISOString() },
+      { onConflict:"group_id,track" }
+    );
+    renderGroupPanel();
+  }catch(e){ alert(e.message || "오류가 발생했어요."); }
+}
+
+const groupPanelEl = document.getElementById("panel-group");
+if(groupPanelEl){
+  groupPanelEl.addEventListener("click", (e)=>{
+    const toggle = e.target.closest(".group-entry-toggle");
+    if(toggle){ toggleGroupToday(toggle.dataset.group, toggle.dataset.id); return; }
+    const btn = e.target.closest("[data-gact]");
+    if(!btn) return;
+    const act = btn.dataset.gact;
+    if(act==="create") createGroup();
+    else if(act==="join") joinGroupByCode();
+    else if(act==="leave") leaveGroup(btn.dataset.group);
+    else if(act==="delete") deleteGroup(btn.dataset.group);
+    else if(act==="copycode"){
+      navigator.clipboard?.writeText(btn.dataset.code).then(()=>{
+        const old = btn.textContent; btn.textContent="복사됨"; setTimeout(()=>{ btn.textContent = old; }, 1200);
+      });
+    }
+  });
+  groupPanelEl.addEventListener("change", (e)=>{
+    const sel = e.target.closest("[data-gact='modeselect']");
+    if(sel) changeGroupMode(sel.dataset.group, sel.value);
+  });
+}
 
 /* ---------- init ---------- */
 (async function init(){
+  const headerIcon = document.getElementById("header-icon");
+  if(headerIcon) headerIcon.innerHTML = ICONS.home;
+
+  renderAuthBar();
+  if(supabaseClient){
+    try{
+      const { data } = await supabaseClient.auth.getSession();
+      currentUser = data && data.session ? data.session.user : null;
+    }catch(e){ console.error("세션 확인 실패", e); }
+    renderAuthBar();
+  }
+
   await loadState("bible");
   await loadState("ls");
   render("bible");
   render("ls");
+  renderHomePanel();
+
+  if(supabaseClient){
+    supabaseClient.auth.onAuthStateChange(async (_event, session)=>{
+      currentUser = session ? session.user : null;
+      renderAuthBar();
+      if(currentUser){
+        const panel = document.getElementById("auth-panel");
+        if(panel) panel.classList.remove("open");
+      }
+      await loadState("bible");
+      await loadState("ls");
+      render("bible");
+      render("ls");
+    });
+  }
 })();
 </script>
 </body>
