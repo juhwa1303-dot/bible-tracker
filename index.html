@@ -81,14 +81,22 @@
     background:#fff;
     border-bottom:1px solid var(--hairline);
   }
-  .auth-panel.open{ max-height:340px; }
+  .auth-panel.open{ max-height:400px; }
   .auth-bar{
     padding:16px 18px;
     font-size:13px;
   }
+  .auth-mode-title{
+    font-family:'Gothic A1',sans-serif;font-weight:800;font-size:15px;
+    margin-bottom:10px;color:var(--ink);
+  }
   .auth-bar .auth-row{
     display:flex;align-items:center;gap:8px;flex-wrap:wrap;
   }
+  .auth-bar .auth-col{
+    display:flex;flex-direction:column;gap:8px;
+  }
+  .auth-bar .auth-col button[type="submit"]{margin-top:2px;}
   .auth-bar input{
     font-family:'IBM Plex Sans KR',sans-serif;
     font-size:15px;
@@ -1444,8 +1452,8 @@ let VIEWMODE = { bible:"month" };
 let OPEN = { bible:new Set(), ls:new Set() };
 
 /* ---------- Supabase 연결 (아래 두 값을 Supabase 프로젝트 정보로 채워주세요) ---------- */
-const SUPABASE_URL = "https://flwhndozusrphpcrxphl.supabase.co";       // 예: https://xxxxxxxx.supabase.co
-const SUPABASE_ANON_KEY = "sb_publishable_XZRyONx6zBSQeXipFd5ehQ_UxeYzTTF";
+const SUPABASE_URL = "YOUR_SUPABASE_URL";       // 예: https://xxxxxxxx.supabase.co
+const SUPABASE_ANON_KEY = "YOUR_SUPABASE_ANON_KEY";
 
 let supabaseClient = null;
 let currentUser = null;
@@ -1458,7 +1466,7 @@ if(typeof supabase !== "undefined" && SUPABASE_URL.startsWith("http")){
   catch(e){ console.error("Supabase 초기화 실패", e); }
 }
 
-let authMode = "signin"; // "signin" | "forgot" | "reset"
+let authMode = "signin"; // "signin" | "signup" | "forgot" | "reset"
 
 function renderAuthBar(){
   const el = document.getElementById("auth-bar");
@@ -1512,16 +1520,33 @@ function renderAuthBar(){
     return;
   }
 
+  if(authMode === "signup"){
+    el.innerHTML = `
+      <div class="auth-mode-title">회원가입</div>
+      <form class="auth-col" id="auth-form" autocomplete="on">
+        <input type="email" id="auth-email" name="email" placeholder="이메일" autocomplete="username">
+        <input type="password" id="auth-password" name="password" placeholder="비밀번호 (6자 이상)" autocomplete="new-password">
+        <button type="submit" data-authact="signup">가입하기</button>
+      </form>
+      <div class="auth-msg" id="auth-msg">
+        가입 후 확인 이메일이 발송돼요. 메일함의 링크를 눌러야 로그인이 완료돼요.
+        <button type="button" class="linkbtn" data-authact="backtosignin" style="padding:0;margin-left:6px;">이미 계정이 있나요? 로그인</button>
+      </div>
+    `;
+    return;
+  }
+
   el.innerHTML = `
-    <form class="auth-row" id="auth-form" autocomplete="on">
+    <div class="auth-mode-title">로그인</div>
+    <form class="auth-col" id="auth-form" autocomplete="on">
       <input type="email" id="auth-email" name="email" placeholder="이메일" autocomplete="username">
       <input type="password" id="auth-password" name="password" placeholder="비밀번호 (6자 이상)" autocomplete="current-password">
       <button type="submit" data-authact="signin">로그인</button>
-      <button type="button" class="secondary" data-authact="signup">회원가입</button>
     </form>
     <div class="auth-msg" id="auth-msg">
-      로그인하면 이 브라우저에 아이디·비밀번호가 저장되고, 다음에 자동으로 로그인돼요.
-      <button type="button" class="linkbtn" data-authact="forgot" style="padding:0;margin-left:6px;">비밀번호를 잊으셨나요?</button>
+      로그인하면 이 브라우저에 아이디·비밀번호가 저장되고, 다음에 자동으로 로그인돼요.<br>
+      <button type="button" class="linkbtn" data-authact="goSignup" style="padding:0;">계정이 없나요? 회원가입</button>
+      · <button type="button" class="linkbtn" data-authact="forgot" style="padding:0;">비밀번호를 잊으셨나요?</button>
     </div>
   `;
 }
@@ -1595,8 +1620,8 @@ if(authBarEl){
     const btn = e.target.closest("[data-authact]");
     if(!btn || btn.type === "submit") return;
     const act = btn.dataset.authact;
-    if(act==="signup") doAuth("signup");
-    else if(act==="signout") supabaseClient.auth.signOut();
+    if(act==="signout") supabaseClient.auth.signOut();
+    else if(act==="goSignup"){ authMode = "signup"; renderAuthBar(); }
     else if(act==="forgot"){ authMode = "forgot"; renderAuthBar(); }
     else if(act==="backtosignin"){ authMode = "signin"; renderAuthBar(); }
   });
@@ -1605,6 +1630,7 @@ if(authBarEl){
     const submitter = e.submitter || e.target.querySelector('[type="submit"]');
     const act = submitter ? submitter.dataset.authact : null;
     if(act==="signin") doAuth("signin");
+    else if(act==="signup") doAuth("signup");
     else if(act==="sendreset") doSendReset();
     else if(act==="dopasswordupdate") doPasswordUpdate();
   });
