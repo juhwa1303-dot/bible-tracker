@@ -73,51 +73,73 @@
     font-family:'Gothic A1',sans-serif;font-weight:700;font-size:15px;
   }
 
-  /* ---- 계정 패널 (평소엔 접혀 있음) ---- */
+  /* ---- 계정 화면 (전체화면 로그인 페이지) ---- */
   .auth-panel{
-    max-height:0;
-    overflow:hidden;
-    transition:max-height .25s ease;
+    display:none;
+    position:fixed;inset:0;z-index:100;
     background:#fff;
-    border-bottom:1px solid var(--hairline);
+    overflow-y:auto;
   }
-  .auth-panel.open{ max-height:400px; }
+  .auth-panel.open{ display:flex; align-items:center; justify-content:center; padding:24px; }
+  .auth-close-btn{
+    position:fixed;top:calc(16px + env(safe-area-inset-top));right:16px;
+    width:36px;height:36px;border-radius:50%;
+    border:1.5px solid var(--hairline);background:#fff;color:var(--ink-soft);
+    font-size:15px;cursor:pointer;z-index:101;
+  }
+  .auth-card{
+    width:100%;max-width:360px;
+    text-align:center;
+  }
+  .auth-card-title{
+    font-family:'Gothic A1',sans-serif;font-weight:800;font-size:20px;
+    color:var(--ink);margin-bottom:32px;
+  }
   .auth-bar{
-    padding:16px 18px;
-    font-size:13px;
+    font-size:14px;
+    text-align:left;
   }
   .auth-mode-title{
-    font-family:'Gothic A1',sans-serif;font-weight:800;font-size:15px;
-    margin-bottom:10px;color:var(--ink);
+    font-family:'Gothic A1',sans-serif;font-weight:800;font-size:22px;
+    margin-bottom:20px;color:var(--ink);text-align:center;
   }
   .auth-bar .auth-row{
     display:flex;align-items:center;gap:8px;flex-wrap:wrap;
   }
   .auth-bar .auth-col{
-    display:flex;flex-direction:column;gap:8px;
+    display:flex;flex-direction:column;gap:12px;
   }
-  .auth-bar .auth-col button[type="submit"]{margin-top:2px;}
+  .auth-bar .auth-col button[type="submit"]{margin-top:6px;}
+  .remember-me-row{
+    display:flex;align-items:center;gap:8px;
+    font-size:13.5px;color:var(--ink-soft);
+    cursor:pointer;margin-top:-2px;
+  }
+  .remember-me-row input[type="checkbox"]{
+    width:17px;height:17px;flex-shrink:0;accent-color:var(--bible);cursor:pointer;
+  }
   .auth-bar input{
     font-family:'IBM Plex Sans KR',sans-serif;
-    font-size:15px;
-    padding:11px 12px;
+    font-size:16px;
+    padding:14px 14px;
     border:1.5px solid var(--hairline);
-    border-radius:8px;
+    border-radius:10px;
     background:#fff;
     color:var(--ink);
-    min-width:150px;
-    flex:1;
+    width:100%;
   }
+  .auth-bar input:focus{outline:none;border-color:var(--bible);}
   .auth-bar button{
     font-family:'IBM Plex Sans KR',sans-serif;
-    font-weight:600;
-    font-size:14px;
-    padding:11px 16px;
-    border-radius:8px;
+    font-weight:700;
+    font-size:16px;
+    padding:14px 16px;
+    border-radius:10px;
     border:none;
-    background:var(--ink);
+    background:var(--bible);
     color:#fff;
     cursor:pointer;
+    width:100%;
   }
   .auth-bar button.secondary{
     background:none;
@@ -125,14 +147,24 @@
     border:1.5px solid var(--hairline);
   }
   .auth-bar .auth-msg{
-    margin-top:8px;
-    font-size:12px;
+    margin-top:16px;
+    font-size:13px;
     color:var(--ink-soft);
+    text-align:center;
+    line-height:1.8;
   }
   .auth-bar .auth-msg.error{color:var(--ls);}
-  .auth-bar .signed-in{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;}
+  .auth-bar .linkbtn{
+    color:var(--bible);
+    font-weight:600;
+    width:auto;
+    background:none;
+    padding:0;
+  }
+  .auth-bar .signed-in{display:flex;flex-direction:column;align-items:center;gap:14px;text-align:center;}
   .auth-bar .signed-in .who{color:var(--ink-soft);}
   .auth-bar .signed-in .who b{color:var(--ink);}
+  .auth-bar .signed-in button{width:auto;padding:10px 20px;}
 
 
   /* ---- 오늘의 추구 카드 ---- */
@@ -602,7 +634,11 @@
   </button>
 </header>
 <div id="auth-panel" class="auth-panel">
-  <div id="auth-bar" class="auth-bar"></div>
+  <button id="auth-close-btn" class="auth-close-btn" aria-label="닫기">✕</button>
+  <div class="auth-card">
+    <div class="auth-card-title">성경 라이프스터디 진도표</div>
+    <div id="auth-bar" class="auth-bar"></div>
+  </div>
 </div>
 
 <div class="wrap">
@@ -1452,15 +1488,27 @@ let VIEWMODE = { bible:"month" };
 let OPEN = { bible:new Set(), ls:new Set() };
 
 /* ---------- Supabase 연결 (아래 두 값을 Supabase 프로젝트 정보로 채워주세요) ---------- */
-const SUPABASE_URL = "https://bible-tracker-eight.vercel.app/";       // 예: https://xxxxxxxx.supabase.co
-const SUPABASE_ANON_KEY = "rlawnghk3119!";
+const SUPABASE_URL = "https://flwhndozusrphpcrxphl.supabase.co";
+const SUPABASE_ANON_KEY = "sb_publishable_XZRyONx6zBSQeXipFd5ehQ_UxeYzTTF";
+
+// "자동 로그인" 체크 여부에 따라 세션을 localStorage(브라우저 재시작해도 유지)
+// 또는 sessionStorage(탭 닫으면 로그아웃)에 나눠 저장하는 커스텀 스토리지
+const rememberMeStorage = {
+  getItem: (key) => localStorage.getItem(key) ?? sessionStorage.getItem(key),
+  setItem: (key, value) => {
+    const remember = localStorage.getItem("rememberMe") !== "false";
+    if(remember){ localStorage.setItem(key, value); sessionStorage.removeItem(key); }
+    else{ sessionStorage.setItem(key, value); localStorage.removeItem(key); }
+  },
+  removeItem: (key) => { localStorage.removeItem(key); sessionStorage.removeItem(key); }
+};
 
 let supabaseClient = null;
 let currentUser = null;
 if(typeof supabase !== "undefined" && SUPABASE_URL.startsWith("http")){
   try{
     supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
-      auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true }
+      auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true, storage: rememberMeStorage }
     });
   }
   catch(e){ console.error("Supabase 초기화 실패", e); }
@@ -1529,7 +1577,8 @@ function renderAuthBar(){
         <button type="submit" data-authact="signup">가입하기</button>
       </form>
       <div class="auth-msg" id="auth-msg">
-        가입 후 확인 이메일이 발송돼요. 메일함의 링크를 눌러야 로그인이 완료돼요.
+        가입 후 입력하신 이메일 주소로 인증 메일이 발송됩니다.<br>
+        이메일의 인증 링크를 클릭하면 가입이 완료됩니다.
         <button type="button" class="linkbtn" data-authact="backtosignin" style="padding:0;margin-left:6px;">이미 계정이 있나요? 로그인</button>
       </div>
     `;
@@ -1541,12 +1590,15 @@ function renderAuthBar(){
     <form class="auth-col" id="auth-form" autocomplete="on">
       <input type="email" id="auth-email" name="email" placeholder="이메일" autocomplete="username">
       <input type="password" id="auth-password" name="password" placeholder="비밀번호 (6자 이상)" autocomplete="current-password">
+      <label class="remember-me-row">
+        <input type="checkbox" id="remember-me" checked>
+        자동 로그인
+      </label>
       <button type="submit" data-authact="signin">로그인</button>
     </form>
     <div class="auth-msg" id="auth-msg">
-      로그인하면 이 브라우저에 아이디·비밀번호가 저장되고, 다음에 자동으로 로그인돼요.<br>
-      <button type="button" class="linkbtn" data-authact="goSignup" style="padding:0;">계정이 없나요? 회원가입</button>
-      · <button type="button" class="linkbtn" data-authact="forgot" style="padding:0;">비밀번호를 잊으셨나요?</button>
+      <button type="button" class="linkbtn" data-authact="goSignup" style="padding:0;">[회원가입]</button>
+      <button type="button" class="linkbtn" data-authact="forgot" style="padding:0;">[비밀번호 찾기]</button>
     </div>
   `;
 }
@@ -1562,13 +1614,18 @@ async function doAuth(mode){
     return;
   }
   if(msg){ msg.classList.remove("error"); msg.textContent = mode==="signup" ? "가입 처리 중..." : "로그인 중..."; }
+  if(mode==="signin"){
+    const rememberEl = document.getElementById("remember-me");
+    const remember = rememberEl ? rememberEl.checked : true;
+    try{ localStorage.setItem("rememberMe", remember ? "true" : "false"); }catch(e){}
+  }
   try{
     const { data, error } = mode==="signup"
       ? await supabaseClient.auth.signUp({ email, password })
       : await supabaseClient.auth.signInWithPassword({ email, password });
     if(error) throw error;
     if(mode==="signup" && data && !data.session){
-      if(msg) msg.textContent = "가입 확인 이메일을 보냈어요. 메일함을 확인하고 링크를 눌러주세요.";
+      if(msg) msg.innerHTML = "가입 후 입력하신 이메일 주소로 인증 메일이 발송됩니다.<br>이메일의 인증 링크를 클릭하면 가입이 완료됩니다.";
       return;
     }
   }catch(e){
@@ -2072,6 +2129,12 @@ document.addEventListener("click", async (e)=>{
     return;
   }
 
+  const closeBtn = e.target.closest("#auth-close-btn");
+  if(closeBtn){
+    document.getElementById("auth-panel").classList.remove("open");
+    return;
+  }
+
   const tabBtn = e.target.closest(".tabbtn");
   if(tabBtn){
     document.querySelectorAll(".tabbtn").forEach(b=>b.classList.remove("active"));
@@ -2088,7 +2151,12 @@ document.addEventListener("click", async (e)=>{
     const headerIcon = document.getElementById("header-icon");
     if(headerIcon) headerIcon.innerHTML = ICONS[id] || "";
     // 탭별로 배경색을 바꾸지 않고 전체를 한 톤으로 유지
-    if(id==="group") renderGroupPanel();
+    if(id==="group"){
+      renderGroupPanel();
+      if(supabaseClient && !currentUser){
+        document.getElementById("auth-panel").classList.add("open");
+      }
+    }
     if(id==="home") renderHomePanel();
     return;
   }
@@ -2640,6 +2708,7 @@ if(groupPanelEl){
       await loadState("ls");
       render("bible");
       render("ls");
+      if(document.getElementById("panel-group").classList.contains("active")) renderGroupPanel();
     });
   }
 })();
