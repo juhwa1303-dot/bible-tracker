@@ -1540,7 +1540,7 @@ function renderAuthBar(){
     el.innerHTML = `
       <div class="signed-in">
         <span class="who"><b>${currentUser.email}</b>로 로그인됨 · 진도가 계정에 저장돼요</span>
-        <button class="secondary" data-authact="signout">로그아웃</button>
+        <button type="button" class="secondary" data-authact="signout">로그아웃</button>
       </div>`;
     return;
   }
