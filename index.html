@@ -258,6 +258,18 @@
   .member-bars{display:flex;gap:14px;font-size:11.5px;color:var(--ink-soft);}
   .member-bars b{color:var(--ink);}
   .group-empty{color:var(--ink-faint);font-size:13px;}
+  .group-list-row{
+    display:flex;align-items:center;gap:10px;
+    background:#fff;border:1.5px solid var(--hairline);border-radius:12px;
+    padding:14px 16px;margin-bottom:10px;cursor:pointer;
+  }
+  .group-list-row:hover{border-color:#7A4FC2;}
+  .group-list-row .group-list-name{
+    flex:1;min-width:0;
+    font-family:'Gothic A1',sans-serif;font-weight:700;font-size:14.5px;color:var(--ink);
+    overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+  }
+  .group-list-row .chevron{color:var(--ink-faint);font-size:12px;}
 
   /* ---- 하단 고정 네비게이션 ---- */
   .bottom-nav{
@@ -2398,6 +2410,8 @@ function lsTotalsFromIds(ids){
   return computeIdTotals(ids, all);
 }
 
+let GROUP_VIEW = { mode: "list", groupId: null };
+
 async function renderGroupPanel(){
   const el = document.getElementById("panel-group");
   if(!el) return;
@@ -2411,140 +2425,196 @@ async function renderGroupPanel(){
     return;
   }
 
+  if(GROUP_VIEW.mode === "create") return renderGroupCreateView(el);
+  if(GROUP_VIEW.mode === "join") return renderGroupJoinView(el);
+  if(GROUP_VIEW.mode === "detail") return renderGroupDetailView(el, GROUP_VIEW.groupId);
+  return renderGroupListView(el);
+}
+
+function groupBackBtn(){
+  return `<button type="button" class="linkbtn" data-gact="nav-list" style="padding:0;margin-bottom:16px;">‹ 목록으로</button>`;
+}
+
+async function renderGroupListView(el){
   el.innerHTML = `<div class="panel-inner">불러오는 중...</div>`;
-
-  const createForm = `
-    <div class="group-section">
-      <h3>새 그룹 만들기</h3>
-      <div class="group-row">
-        <input type="text" id="group-name" placeholder="그룹 이름 (예: 우리 구역)">
-      </div>
-      <div class="mode-options">
-        <label><input type="radio" name="group-mode" value="shared"><span><b>${MODE_LABEL.shared}</b> — ${MODE_DESC.shared}</span></label>
-        <label><input type="radio" name="group-mode" value="individual" checked><span><b>${MODE_LABEL.individual}</b> — ${MODE_DESC.individual}</span></label>
-        <label><input type="radio" name="group-mode" value="social_only"><span><b>${MODE_LABEL.social_only}</b> — ${MODE_DESC.social_only}</span></label>
-      </div>
-      <div class="group-row">
-        <input type="text" id="group-nickname-create" placeholder="그룹에서 쓸 닉네임" value="${(currentUser.email||"").split("@")[0]}">
-        <button data-gact="create">그룹 만들기</button>
-      </div>
-      <div class="auth-msg" id="group-msg-create"></div>
-    </div>
-
-    <div class="group-section">
-      <h3>초대 코드로 참여하기</h3>
-      <div class="group-row">
-        <input type="text" id="join-code" placeholder="초대 코드 8자리">
-        <input type="text" id="group-nickname-join" placeholder="그룹에서 쓸 닉네임" value="${(currentUser.email||"").split("@")[0]}">
-        <button data-gact="join">참여하기</button>
-      </div>
-      <div class="auth-msg" id="group-msg-join"></div>
-    </div>
-  `;
-
   let myRows = [];
   try{
     const { data, error } = await supabaseClient
       .from("group_members")
-      .select("nickname, groups(id,name,owner_id,progress_mode,invite_code)")
+      .select("groups(id,name,progress_mode)")
       .eq("user_id", currentUser.id);
     if(error) throw error;
-    myRows = data || [];
+    myRows = (data || []).filter(r=>r.groups);
   }catch(e){
-    el.innerHTML = `<div class="panel-inner">${createForm}<div class="note">그룹을 불러오지 못했어요: ${e.message||e}</div></div>`;
+    el.innerHTML = `<div class="panel-inner"><div class="note">그룹을 불러오지 못했어요: ${e.message||e}</div>${createJoinButtonsHtml()}</div>`;
     return;
   }
 
-  if(myRows.length===0){
-    el.innerHTML = `<div class="panel-inner">${createForm}<div class="group-empty">아직 참여한 그룹이 없어요.</div></div>`;
+  const listHtml = myRows.length ? `
+    <div class="group-section">
+      <h3>내 그룹</h3>
+      ${myRows.map(row=>`
+        <div class="group-list-row" data-gact="open-group" data-group="${row.groups.id}">
+          <span class="group-list-name">${row.groups.name}</span>
+          <span class="group-mode-badge">${MODE_LABEL[row.groups.progress_mode] || row.groups.progress_mode}</span>
+          <span class="chevron">▸</span>
+        </div>
+      `).join("")}
+    </div>
+  ` : `<div class="group-empty" style="margin-bottom:18px;">아직 참여한 그룹이 없어요.</div>`;
+
+  el.innerHTML = `<div class="panel-inner">${listHtml}${createJoinButtonsHtml()}</div>`;
+}
+
+function createJoinButtonsHtml(){
+  return `
+    <div class="group-row" style="gap:10px;">
+      <button type="button" data-gact="nav-create">+ 새 그룹 만들기</button>
+      <button type="button" class="secondary" data-gact="nav-join">초대 코드로 참여</button>
+    </div>
+  `;
+}
+
+function renderGroupCreateView(el){
+  el.innerHTML = `
+    <div class="panel-inner">
+      ${groupBackBtn()}
+      <div class="group-section">
+        <h3>새 그룹 만들기</h3>
+        <div class="group-row">
+          <input type="text" id="group-name" placeholder="그룹 이름 (예: 우리 구역)">
+        </div>
+        <div class="mode-options">
+          <label><input type="radio" name="group-mode" value="shared"><span><b>${MODE_LABEL.shared}</b> — ${MODE_DESC.shared}</span></label>
+          <label><input type="radio" name="group-mode" value="individual" checked><span><b>${MODE_LABEL.individual}</b> — ${MODE_DESC.individual}</span></label>
+          <label><input type="radio" name="group-mode" value="social_only"><span><b>${MODE_LABEL.social_only}</b> — ${MODE_DESC.social_only}</span></label>
+        </div>
+        <div class="group-row">
+          <input type="text" id="group-nickname-create" placeholder="그룹에서 쓸 닉네임" value="${(currentUser.email||"").split("@")[0]}">
+        </div>
+        <div class="group-row">
+          <button type="button" data-gact="create">그룹 만들기</button>
+        </div>
+        <div class="auth-msg" id="group-msg-create"></div>
+      </div>
+    </div>
+  `;
+}
+
+function renderGroupJoinView(el){
+  el.innerHTML = `
+    <div class="panel-inner">
+      ${groupBackBtn()}
+      <div class="group-section">
+        <h3>초대 코드로 참여하기</h3>
+        <div class="group-row">
+          <input type="text" id="join-code" placeholder="초대 코드 8자리">
+        </div>
+        <div class="group-row">
+          <input type="text" id="group-nickname-join" placeholder="그룹에서 쓸 닉네임" value="${(currentUser.email||"").split("@")[0]}">
+        </div>
+        <div class="group-row">
+          <button type="button" data-gact="join">참여하기</button>
+        </div>
+        <div class="auth-msg" id="group-msg-join"></div>
+      </div>
+    </div>
+  `;
+}
+
+async function renderGroupDetailView(el, groupId){
+  el.innerHTML = `<div class="panel-inner">${groupBackBtn()}불러오는 중...</div>`;
+
+  let g, members;
+  try{
+    const { data: gData, error: gErr } = await supabaseClient.from("groups").select("id,name,owner_id,progress_mode,invite_code").eq("id", groupId).single();
+    if(gErr) throw gErr;
+    g = gData;
+    const { data: mData } = await supabaseClient.from("group_members").select("user_id,nickname,joined_at").eq("group_id", groupId);
+    members = mData || [];
+  }catch(e){
+    el.innerHTML = `<div class="panel-inner">${groupBackBtn()}<div class="note">그룹을 불러오지 못했어요: ${e.message||e}</div></div>`;
     return;
   }
 
-  const cardsHtml = await Promise.all(myRows.map(async (row)=>{
-    const g = row.groups;
-    if(!g) return "";
-    let members = [];
+  const isOwner = g.owner_id === currentUser.id;
+  let bodyHtml = "";
+
+  if(g.progress_mode === "social_only"){
+    bodyHtml = members.length ? `
+      <div class="member-list">
+        ${members.map(m=>`<div class="member-row"><span>${m.nickname || "이름없음"}${m.user_id===currentUser.id?" (나)":""}</span><span>${new Date(m.joined_at).toLocaleDateString("ko-KR")} 참여</span></div>`).join("")}
+      </div>` : `<div class="group-empty">멤버 정보가 없어요.</div>`;
+
+  }else if(g.progress_mode === "individual"){
+    const memberIds = members.map(m=>m.user_id);
+    let progressRows = [];
     try{
-      const { data } = await supabaseClient.from("group_members").select("user_id,nickname,joined_at").eq("group_id", g.id);
-      members = data || [];
-    }catch(e){ members = []; }
-
-    const isOwner = g.owner_id === currentUser.id;
-    let bodyHtml = "";
-
-    if(g.progress_mode === "social_only"){
-      bodyHtml = members.length ? `
-        <div class="member-list">
-          ${members.map(m=>`<div class="member-row"><span>${m.nickname || "이름없음"}${m.user_id===currentUser.id?" (나)":""}</span><span>${new Date(m.joined_at).toLocaleDateString("ko-KR")} 참여</span></div>`).join("")}
-        </div>` : `<div class="group-empty">멤버 정보가 없어요.</div>`;
-
-    }else if(g.progress_mode === "individual"){
-      const memberIds = members.map(m=>m.user_id);
-      let progressRows = [];
-      try{
-        const { data } = await supabaseClient.from("reading_progress").select("user_id,track,ids").in("user_id", memberIds.length?memberIds:["00000000-0000-0000-0000-000000000000"]);
-        progressRows = data || [];
-      }catch(e){ progressRows = []; }
-      const byUser = {};
-      progressRows.forEach(r=>{ byUser[r.user_id] = byUser[r.user_id] || {}; byUser[r.user_id][r.track] = r.ids; });
-      bodyHtml = `<div class="member-list">` + members.map(m=>{
-        const bibleIds = (byUser[m.user_id] && byUser[m.user_id].bible) || [];
-        const lsIds = (byUser[m.user_id] && byUser[m.user_id].ls) || [];
-        const bibleP = pct(bibleTotalsFromIds(bibleIds).all.done, bibleTotalsFromIds(bibleIds).all.total);
-        const lsTot = lsTotalsFromIds(lsIds);
-        const lsP = pct(lsTot.done, lsTot.total);
-        return `<div class="member-row">
-          <span>${m.nickname || "이름없음"}${m.user_id===currentUser.id?" (나)":""}</span>
-          <span class="member-bars">성경 <b>${bibleP}%</b> · 라이프스터디 <b>${lsP}%</b></span>
-        </div>`;
-      }).join("") + `</div>`;
-
-    }else{ // shared
-      let bibleIds = [], lsIds = [];
-      try{
-        const { data } = await supabaseClient.from("group_progress").select("track,ids").eq("group_id", g.id);
-        (data||[]).forEach(r=>{ if(r.track==="bible") bibleIds = r.ids||[]; if(r.track==="ls") lsIds = r.ids||[]; });
-      }catch(e){}
-      const bt = bibleTotalsFromIds(bibleIds);
+      const { data } = await supabaseClient.from("reading_progress").select("user_id,track,ids").in("user_id", memberIds.length?memberIds:["00000000-0000-0000-0000-000000000000"]);
+      progressRows = data || [];
+    }catch(e){ progressRows = []; }
+    const byUser = {};
+    progressRows.forEach(r=>{ byUser[r.user_id] = byUser[r.user_id] || {}; byUser[r.user_id][r.track] = r.ids; });
+    bodyHtml = `<div class="member-list">` + members.map(m=>{
+      const bibleIds = (byUser[m.user_id] && byUser[m.user_id].bible) || [];
+      const lsIds = (byUser[m.user_id] && byUser[m.user_id].ls) || [];
+      const bibleP = pct(bibleTotalsFromIds(bibleIds).all.done, bibleTotalsFromIds(bibleIds).all.total);
       const lsTot = lsTotalsFromIds(lsIds);
-      const now = new Date();
-      const todayStr = `${now.getMonth()+1}/${now.getDate()}`;
-      const todaySet = new Set(bibleIds);
-      const todayItems = [...OT_ITEMS.filter(it=>it.date===todayStr), ...NT_ITEMS.filter(it=>it.date===todayStr)];
-      bodyHtml = `
-        <div class="ledger" style="margin-bottom:14px;">
-          <div class="gauge-thirds">
-            <div class="gauge-item">
-              ${gaugeHtml(pct(bt.all.done,bt.all.total), {size:64, stroke:6, trackColor:"#D9CBF2", fillColor:"#7A4FC2", complete: bt.all.total && bt.all.done===bt.all.total, labelSize:12})}
-              <div class="gauge-item-label">전체</div>
-              <div class="gauge-item-count">${bt.all.done}/${bt.all.total}</div>
-            </div>
-            <div class="gauge-item">
-              ${gaugeHtml(pct(bt.ot.done,bt.ot.total), {size:48, stroke:5, trackColor:"#D9CBF2", fillColor:"#7A4FC2", complete: bt.ot.total && bt.ot.done===bt.ot.total})}
-              <div class="gauge-item-label">구약</div>
-              <div class="gauge-item-count">${bt.ot.done}/${bt.ot.total}</div>
-            </div>
-            <div class="gauge-item">
-              ${gaugeHtml(pct(bt.nt.done,bt.nt.total), {size:48, stroke:5, trackColor:"#D9CBF2", fillColor:"#7A4FC2", complete: bt.nt.total && bt.nt.done===bt.nt.total})}
-              <div class="gauge-item-label">신약</div>
-              <div class="gauge-item-count">${bt.nt.done}/${bt.nt.total}</div>
-            </div>
+      const lsP = pct(lsTot.done, lsTot.total);
+      return `<div class="member-row">
+        <span>${m.nickname || "이름없음"}${m.user_id===currentUser.id?" (나)":""}</span>
+        <span class="member-bars">성경 <b>${bibleP}%</b> · 라이프스터디 <b>${lsP}%</b></span>
+      </div>`;
+    }).join("") + `</div>`;
+
+  }else{ // shared
+    let bibleIds = [], lsIds = [];
+    try{
+      const { data } = await supabaseClient.from("group_progress").select("track,ids").eq("group_id", g.id);
+      (data||[]).forEach(r=>{ if(r.track==="bible") bibleIds = r.ids||[]; if(r.track==="ls") lsIds = r.ids||[]; });
+    }catch(e){}
+    const bt = bibleTotalsFromIds(bibleIds);
+    const lsTot = lsTotalsFromIds(lsIds);
+    const now = new Date();
+    const todayStr = `${now.getMonth()+1}/${now.getDate()}`;
+    const todaySet = new Set(bibleIds);
+    const todayItems = [...OT_ITEMS.filter(it=>it.date===todayStr), ...NT_ITEMS.filter(it=>it.date===todayStr)];
+    bodyHtml = `
+      <div class="ledger" style="margin-bottom:14px;">
+        <div class="gauge-thirds">
+          <div class="gauge-item">
+            ${gaugeHtml(pct(bt.all.done,bt.all.total), {size:64, stroke:6, trackColor:"#D9CBF2", fillColor:"#7A4FC2", complete: bt.all.total && bt.all.done===bt.all.total, labelSize:12})}
+            <div class="gauge-item-label">전체</div>
+            <div class="gauge-item-count">${bt.all.done}/${bt.all.total}</div>
+          </div>
+          <div class="gauge-item">
+            ${gaugeHtml(pct(bt.ot.done,bt.ot.total), {size:48, stroke:5, trackColor:"#D9CBF2", fillColor:"#7A4FC2", complete: bt.ot.total && bt.ot.done===bt.ot.total})}
+            <div class="gauge-item-label">구약</div>
+            <div class="gauge-item-count">${bt.ot.done}/${bt.ot.total}</div>
+          </div>
+          <div class="gauge-item">
+            ${gaugeHtml(pct(bt.nt.done,bt.nt.total), {size:48, stroke:5, trackColor:"#D9CBF2", fillColor:"#7A4FC2", complete: bt.nt.total && bt.nt.done===bt.nt.total})}
+            <div class="gauge-item-label">신약</div>
+            <div class="gauge-item-count">${bt.nt.done}/${bt.nt.total}</div>
           </div>
         </div>
-        <div style="font-size:11.5px;color:var(--ink-soft);margin-bottom:6px;">라이프스터디 전체 <b>${pct(lsTot.done,lsTot.total)}%</b></div>
-        ${todayItems.length ? `<div class="today-label" style="margin-top:10px;">오늘의 추구 · ${todayStr}</div>` + todayItems.map(it=>`
-          <div class="entry-row group-entry-toggle ${todaySet.has(it.id)?'read':''}" data-group="${g.id}" data-id="${it.id}">
-            <span class="entry-check">${todaySet.has(it.id)?'✓':''}</span>
-            <span class="entry-date">${it.date}</span>
-            <span class="entry-text">${it.text}</span>
-          </div>`).join("") : ""}
-        <div class="member-list" style="margin-top:12px;">
-          ${members.map(m=>`<div class="member-row"><span>${m.nickname || "이름없음"}${m.user_id===currentUser.id?" (나)":""}</span></div>`).join("")}
-        </div>
-      `;
-    }
+      </div>
+      <div style="font-size:11.5px;color:var(--ink-soft);margin-bottom:6px;">라이프스터디 전체 <b>${pct(lsTot.done,lsTot.total)}%</b></div>
+      ${todayItems.length ? `<div class="today-label" style="margin-top:10px;">오늘의 추구 · ${todayStr}</div>` + todayItems.map(it=>`
+        <div class="entry-row group-entry-toggle ${todaySet.has(it.id)?'read':''}" data-group="${g.id}" data-id="${it.id}">
+          <span class="entry-check">${todaySet.has(it.id)?'✓':''}</span>
+          <span class="entry-date">${it.date}</span>
+          <span class="entry-text">${it.text}</span>
+        </div>`).join("") : ""}
+      <div class="member-list" style="margin-top:12px;">
+        ${members.map(m=>`<div class="member-row"><span>${m.nickname || "이름없음"}${m.user_id===currentUser.id?" (나)":""}</span></div>`).join("")}
+      </div>
+    `;
+  }
 
-    return `
+  el.innerHTML = `
+    <div class="panel-inner">
+      ${groupBackBtn()}
       <div class="group-card">
         <div class="group-card-head">
           <h4>${g.name}</h4>
@@ -2552,7 +2622,7 @@ async function renderGroupPanel(){
         </div>
         <div class="invite-row">
           초대 코드 <span class="invite-code">${g.invite_code}</span>
-          <button class="secondary" data-gact="copycode" data-code="${g.invite_code}" style="padding:4px 10px;font-size:11.5px;">복사</button>
+          <button type="button" class="secondary" data-gact="copycode" data-code="${g.invite_code}" style="padding:4px 10px;font-size:11.5px;">복사</button>
         </div>
         ${bodyHtml}
         <div class="group-row" style="margin-top:14px;">
@@ -2562,16 +2632,14 @@ async function renderGroupPanel(){
               <option value="individual" ${g.progress_mode==="individual"?"selected":""}>${MODE_LABEL.individual}</option>
               <option value="social_only" ${g.progress_mode==="social_only"?"selected":""}>${MODE_LABEL.social_only}</option>
             </select>
-            <button class="danger" data-gact="delete" data-group="${g.id}">그룹 삭제</button>
+            <button type="button" class="danger" data-gact="delete" data-group="${g.id}">그룹 삭제</button>
           ` : `
-            <button class="secondary" data-gact="leave" data-group="${g.id}">나가기</button>
+            <button type="button" class="secondary" data-gact="leave" data-group="${g.id}">나가기</button>
           `}
         </div>
       </div>
-    `;
-  }));
-
-  el.innerHTML = `<div class="panel-inner">${createForm}<div class="group-section"><h3>내 그룹</h3>${cardsHtml.join("")}</div></div>`;
+    </div>
+  `;
 }
 
 async function createGroup(){
@@ -2592,6 +2660,7 @@ async function createGroup(){
     const { error: mErr } = await supabaseClient.from("group_members")
       .insert({ group_id: g.id, user_id: currentUser.id, nickname: nickname || null });
     if(mErr) throw mErr;
+    GROUP_VIEW = { mode:"detail", groupId: g.id };
     renderGroupPanel();
   }catch(e){
     if(msg){ msg.textContent = e.message || "오류가 발생했어요."; msg.classList.add("error"); }
@@ -2613,6 +2682,7 @@ async function joinGroupByCode(){
     const { error: mErr } = await supabaseClient.from("group_members")
       .insert({ group_id: g.id, user_id: currentUser.id, nickname: nickname || null });
     if(mErr) throw mErr;
+    GROUP_VIEW = { mode:"detail", groupId: g.id };
     renderGroupPanel();
   }catch(e){
     if(msg){ msg.textContent = e.message || "오류가 발생했어요. (이미 참여 중일 수 있어요)"; msg.classList.add("error"); }
@@ -2623,6 +2693,7 @@ async function leaveGroup(groupId){
   if(!confirm("이 그룹에서 나갈까요?")) return;
   try{
     await supabaseClient.from("group_members").delete().eq("group_id", groupId).eq("user_id", currentUser.id);
+    GROUP_VIEW = { mode:"list", groupId:null };
     renderGroupPanel();
   }catch(e){ alert(e.message || "오류가 발생했어요."); }
 }
@@ -2630,6 +2701,7 @@ async function deleteGroup(groupId){
   if(!confirm("그룹을 삭제할까요? 모든 멤버와 진도 기록이 함께 삭제돼요.")) return;
   try{
     await supabaseClient.from("groups").delete().eq("id", groupId);
+    GROUP_VIEW = { mode:"list", groupId:null };
     renderGroupPanel();
   }catch(e){ alert(e.message || "오류가 발생했어요."); }
 }
@@ -2664,6 +2736,10 @@ if(groupPanelEl){
     else if(act==="join") joinGroupByCode();
     else if(act==="leave") leaveGroup(btn.dataset.group);
     else if(act==="delete") deleteGroup(btn.dataset.group);
+    else if(act==="nav-create"){ GROUP_VIEW = { mode:"create", groupId:null }; renderGroupPanel(); }
+    else if(act==="nav-join"){ GROUP_VIEW = { mode:"join", groupId:null }; renderGroupPanel(); }
+    else if(act==="nav-list"){ GROUP_VIEW = { mode:"list", groupId:null }; renderGroupPanel(); }
+    else if(act==="open-group"){ GROUP_VIEW = { mode:"detail", groupId:btn.dataset.group }; renderGroupPanel(); }
     else if(act==="copycode"){
       navigator.clipboard?.writeText(btn.dataset.code).then(()=>{
         const old = btn.textContent; btn.textContent="복사됨"; setTimeout(()=>{ btn.textContent = old; }, 1200);
